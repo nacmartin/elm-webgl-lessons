@@ -13,17 +13,22 @@ type alias Vertex = { position : Vec3 }
 mesh : Drawable Vertex
 mesh =
   WebGL.Triangle
-    [ ( { position = vec3 0 1 0 }
-      , { position = vec3 -1 -1 0 }
-      , { position = vec3 1 -1 0 }
+    [ (
+        { position = vec3 -1 1 0 },
+        { position = vec3 -2 -1 0 },
+        { position = vec3 0 -1 0 }
+      ),
+      (
+        { position = vec3 3 1 0 },
+        { position = vec3 1 1 0 },
+        { position = vec3 3 -1 0 }
+      ),
+      (
+        { position = vec3 1 1 0 },
+        { position = vec3 3 -1 0 },
+        { position = vec3 1 -1 0 }
       )
     ]
--- mesh = Triangle
---   [ ( Vertex (vec3 0  0 0) (vec3 1 0 0)
---     , Vertex (vec3 1  1 0) (vec3 0 1 0)
---     , Vertex (vec3 1 -1 0) (vec3 0 0 1)
---     )
---   ]
 
 main : Html msg
 main =
@@ -38,7 +43,7 @@ vertexShader = [glsl|
   precision mediump float;
   attribute vec3 position;
   void main() {
-    gl_Position = vec4(0.5 * position, 1);
+    gl_Position = vec4(0.3 * position, 1);
   }
 |]
 
