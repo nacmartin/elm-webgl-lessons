@@ -10,15 +10,20 @@ import AnimationFrame
 
 type alias Vertex = { position : Vec3 }
 
-mesh : Drawable Vertex
-mesh =
+triangle : Drawable Vertex
+triangle =
   WebGL.Triangle
     [ (
         { position = vec3 -1 1 0 },
         { position = vec3 -2 -1 0 },
         { position = vec3 0 -1 0 }
-      ),
-      (
+      )
+    ]
+
+square : Drawable Vertex
+square =
+  WebGL.Triangle
+    [ (
         { position = vec3 3 1 0 },
         { position = vec3 1 1 0 },
         { position = vec3 3 -1 0 }
@@ -34,7 +39,9 @@ main : Html msg
 main =
   WebGL.toHtml
     [ width 400, height 400 ]
-    [ render vertexShader fragmentShader mesh {} ]
+    ( [render vertexShader fragmentShader triangle {}] ++
+      [render vertexShader fragmentShader square {}]
+    )
 
 -- Shaders
 
