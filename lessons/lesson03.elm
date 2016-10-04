@@ -44,6 +44,8 @@ main =
     , update = (\elapsed currentTime -> (elapsed + currentTime, Cmd.none))
     }
 
+-- VIEW
+
 view : Float -> Html msg
 view t =
   WebGL.toHtml
