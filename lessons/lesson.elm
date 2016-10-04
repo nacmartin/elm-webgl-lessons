@@ -55,16 +55,6 @@ vertexShader = [glsl|
     gl_Position = vec4(0.3 * (position + displacement), 1);
   }
 |]
-vertexShader2 : Shader Vertex { unif | displacement:Vec3 } {}
-vertexShader2 = [glsl|
-  attribute vec3 position;
-  uniform vec3 displacement;
-
-  void main() {
-    gl_Position = vec4(0.3 * (position + displacement), 1);
-  }
-|]
-
 
 fragmentShader : Shader {} u {}
 fragmentShader = [glsl|
