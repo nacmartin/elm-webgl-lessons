@@ -13,25 +13,22 @@ type alias Vertex = { position : Vec3, color: Vec3 }
 triangle : Drawable Vertex
 triangle =
   Triangle
-    [ (
-        Vertex (vec3 0 1 0) (vec3 1 0 0),
-        Vertex (vec3 -1 -1 0) (vec3 0 1 0),
-        Vertex (vec3 1 -1 0) (vec3 0 0 1)
+    [ ( Vertex (vec3 0 1 0) (vec3 1 0 0)
+      , Vertex (vec3 -1 -1 0) (vec3 0 1 0)
+      , Vertex (vec3 1 -1 0) (vec3 0 0 1)
       )
     ]
 
 square : Drawable Vertex
 square =
   Triangle
-    [ (
-        Vertex (vec3 1 1 0) (vec3 0.5 0.5 1),
-        Vertex (vec3 -1 1 0) (vec3 0.5 0.5 1),
-        Vertex (vec3 1 -1 0) (vec3 0.5 0.5 1)
+    [ ( Vertex (vec3 1 1 0) (vec3 0.5 0.5 1)
+      , Vertex (vec3 -1 1 0) (vec3 0.5 0.5 1)
+      , Vertex (vec3 1 -1 0) (vec3 0.5 0.5 1)
       ),
-      (
-        Vertex (vec3 -1 1 0) (vec3 0.5 0.5 1),
-        Vertex (vec3 1 -1 0) (vec3 0.5 0.5 1),
-        Vertex (vec3 -1 -1 0) (vec3 0.5 0.5 1)
+      ( Vertex (vec3 -1 1 0) (vec3 0.5 0.5 1)
+      , Vertex (vec3 1 -1 0) (vec3 0.5 0.5 1)
+      , Vertex (vec3 -1 -1 0) (vec3 0.5 0.5 1)
       )
     ]
 

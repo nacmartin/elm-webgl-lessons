@@ -13,25 +13,22 @@ type alias Vertex = { position : Vec3 }
 triangle : Drawable Vertex
 triangle =
   WebGL.Triangle
-    [ (
-        { position = vec3 0 1 0 },
-        { position = vec3 -1 -1 0 },
-        { position = vec3 1 -1 0 }
+    [ ( { position = vec3 0 1 0 }
+      , { position = vec3 -1 -1 0 }
+      , { position = vec3 1 -1 0 }
       )
     ]
 
 square : Drawable Vertex
 square =
   WebGL.Triangle
-    [ (
-        { position = vec3 1 1 0 },
-        { position = vec3 -1 1 0 },
-        { position = vec3 1 -1 0 }
-      ),
-      (
-        { position = vec3 -1 1 0 },
-        { position = vec3 1 -1 0 },
-        { position = vec3 -1 -1 0 }
+    [ ( { position = vec3 1 1 0 }
+      , { position = vec3 -1 1 0 }
+      , { position = vec3 1 -1 0 }
+      )
+    , ( { position = vec3 -1 1 0 }
+      , { position = vec3 1 -1 0 }
+      , { position = vec3 -1 -1 0 }
       )
     ]
 
