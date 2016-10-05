@@ -26,7 +26,7 @@ pyramid =
     Triangle << List.concat <|
       [ pyramidFace colortop colorlfb colorrfb top lfb rfb
       , pyramidFace colortop colorlfb colorrfb top lfb lbb
-      , pyramidFace colortop colorlfb colorrfb top rfb rbb
+      , pyramidFace colortop colorrfb colorlfb top rfb rbb
       , pyramidFace colortop colorlfb colorrfb top rbb lbb
       ]
 
