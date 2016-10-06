@@ -12,6 +12,7 @@ import Html.Attributes exposing (width, height)
 type alias Model =
   { textures : (Maybe Texture, Maybe Texture)
   , theta : Float
+  , textureSelected: Int
   }
 
 
@@ -22,14 +23,14 @@ type Action
 
 init : (Model, Cmd Action)
 init =
-  ( {textures = [Nothing, Nothing], theta = 0}
+  ( {textures = (Nothing, Nothing), theta = 0, textureSelected = 2}
   , fetchTextures |> Task.perform TexturesError TexturesLoaded
   )
 
 fetchTextures : Task Error (Maybe Texture, Maybe Texture)
 fetchTextures =
-  loadTextureWithFilter Linear "texture/crate.gif" `Task.andThen` \linearTexture ->
-  loadTextureWithFilter Nearest "texture/crate.gif" `Task.andThen` \nearestTexture ->
+  loadTextureWithFilter Linear "textures/crate.gif" `Task.andThen` \linearTexture ->
+  loadTextureWithFilter Nearest "textures/crate.gif" `Task.andThen` \nearestTexture ->
   Task.succeed (Just linearTexture, Just nearestTexture)
 
 update : Action -> Model -> (Model, Cmd Action)
@@ -37,8 +38,8 @@ update action model =
   case action of
     TexturesError err ->
       (model, Cmd.none)
-    TexturesLoaded texture ->
-      ({model | texture = Just texture}, Cmd.none)
+    TexturesLoaded textures ->
+      ({model | textures = textures}, Cmd.none)
     Animate dt ->
       ({model | theta = model.theta + dt / 1000}, Cmd.none)
 
@@ -85,19 +86,26 @@ face =
 -- VIEW
 
 view : Model -> Html Action
-view {texture, theta} =
-  (case texture of
-    Nothing ->
-        []
-    Just tex ->
-        [render vertexShader fragmentShader cube (uniformsCube theta tex)]
-  )
-  |> WebGL.toHtml [ width 400, height 400 ]
+view {textures, theta, textureSelected} =
+  let 
+    (texture1, texture2) = textures
+    tex = if textureSelected == 1 then texture1 else texture2
+  in
+    renderEntity cube theta tex
+    |> WebGL.toHtml [ width 400, height 400 ]
 
-uniformsCube : Float -> Texture -> { textures: (Texture, Texture), rotation:Mat4, perspective:Mat4, camera:Mat4, displacement:Vec3 }
-uniformsCube t (texture1, texture2) =
-  { texture1 = texture1
-  , texture2 = texture2
+renderEntity : Drawable { position:Vec3, coord:Vec3 } -> Float -> Maybe Texture -> List Renderable
+renderEntity mesh theta texture =
+  case texture of
+    Nothing ->
+     []
+
+    Just tex ->
+     [render vertexShader fragmentShader mesh (uniformsCube theta tex)]
+
+uniformsCube : Float -> Texture -> { texture:Texture, rotation:Mat4, perspective:Mat4, camera:Mat4, displacement:Vec3 }
+uniformsCube t texture =
+  { texture = texture
   , rotation = makeRotate t (vec3 1 0 0) `mul`  makeRotate t (vec3 0 1 0) `mul`  makeRotate t (vec3 0 0 1)
   , perspective = makePerspective 45 1 0.01 100
   , camera = makeLookAt (vec3 0 0 5) (vec3 0 0 0) (vec3 0 1 0)
@@ -124,7 +132,7 @@ vertexShader = [glsl|
   }
 |]
 
-fragmentShader : Shader {} { unif | texture1:Texture } { vcoord:Vec2 }
+fragmentShader : Shader {} { unif | texture:Texture } { vcoord:Vec2 }
 fragmentShader = [glsl|
   precision mediump float;
   uniform sampler2D texture;
