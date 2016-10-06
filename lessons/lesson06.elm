@@ -6,17 +6,20 @@ import Math.Matrix4 exposing (..)
 import Task exposing (Task)
 import Time exposing (Time)
 import WebGL exposing (..)
-import Html exposing (Html)
+import Html exposing (Html, text, div)
 import Html.App as Html
 import AnimationFrame
-import Html.Attributes exposing (width, height)
+import Html.Attributes exposing (width, height, style)
 
 type alias Model =
   { textures : (Maybe Texture, Maybe Texture)
-  , theta : Float
+  , thetaX : Float
+  , thetaY : Float
   , textureSelected: Int
   , keys : Keys
   , position: Vec3
+  , rx: Float
+  , ry: Float
   }
 
 
@@ -39,7 +42,10 @@ type alias Keys =
 init : (Model, Cmd Action)
 init =
   ( {textures = (Nothing, Nothing)
-  , theta = 0
+  , thetaX = 0
+  , thetaY = 0
+  , rx = 0
+  , ry = 0
   , textureSelected = 1
   , keys = Keys False False False False False False
   , position = (vec3 0 0 -4)
@@ -49,8 +55,8 @@ init =
 
 fetchTextures : Task Error (Maybe Texture, Maybe Texture)
 fetchTextures =
-  loadTextureWithFilter Linear "textures/crate.gif" `Task.andThen` \linearTexture ->
-  loadTextureWithFilter Nearest "textures/crate.gif" `Task.andThen` \nearestTexture ->
+  loadTextureWithFilter WebGL.Linear "textures/crate.gif" `Task.andThen` \linearTexture ->
+  loadTextureWithFilter WebGL.Nearest "textures/crate.gif" `Task.andThen` \nearestTexture ->
   Task.succeed (Just linearTexture, Just nearestTexture)
 
 update : Action -> Model -> (Model, Cmd Action)
@@ -66,12 +72,39 @@ update action model =
       ({model | keys = keyfunc model.keys}, Cmd.none)
     Animate dt ->
       ( { model
-        | theta = model.theta + dt / 1000
+        | thetaX = model.thetaX + model.rx * dt / 1000
+        , thetaY = model.thetaY + model.ry * dt / 1000
         , position = model.position
             |> move model.keys
+        , rx = model.rx
+            |> rotateX model.keys
+        , ry = model.ry
+            |> rotateY model.keys
         }
         , Cmd.none
       )
+
+rotateX : {keys| right: Bool, left: Bool} -> Float -> Float
+rotateX k velocity =
+  let
+    direction =
+      case (k.right, k.left) of
+        (True, False) -> 0.1
+        (False, True) -> -0.1
+        _ -> 0
+  in
+     velocity + direction
+
+rotateY : {keys| up: Bool, down: Bool} -> Float -> Float
+rotateY k velocity =
+  let
+    direction =
+      case (k.up, k.down) of
+        (True, False) -> 0.1
+        (False, True) -> -0.1
+        _ -> 0
+  in
+     velocity + direction
 
 move : {keys| w: Bool, s: Bool} -> Vec3 -> Vec3
 move k position =
@@ -156,27 +189,48 @@ face =
 -- VIEW
 
 view : Model -> Html Action
-view {textures, theta, textureSelected, position} =
+view {textures, thetaX, thetaY, textureSelected, position, rx, ry} =
   let
     (texture1, texture2) = textures
     tex = if textureSelected == 1 then texture1 else texture2
+    entities = renderEntity cube thetaX thetaY tex position
   in
-    renderEntity cube theta tex position
-    |> WebGL.toHtml [ width 400, height 400 ]
+    div
+      []
+      [ WebGL.toHtml
+          [ width 400, height 400 ]
+          entities
+      , div
+          [ style
+              [ ("position", "absolute")
+              , ("font-family", "monospace")
+              , ("text-align", "center")
+              , ("left", "20px")
+              , ("right", "20px")
+              , ("top", "500px")
+              ]
+          ]
+          [ text message]
+      ]
 
-renderEntity : Drawable { position:Vec3, coord:Vec3 } -> Float -> Maybe Texture -> Vec3 -> List Renderable
-renderEntity mesh theta texture position =
+message : String
+message =
+    "Keys are: F -> change texture mode, Right/Left/Up/Down rotate, w/s -> move camera in/out"
+
+
+renderEntity : Drawable { position:Vec3, coord:Vec3 } -> Float -> Float -> Maybe Texture -> Vec3 -> List Renderable
+renderEntity mesh thetaX thetaY texture position =
   case texture of
     Nothing ->
      []
 
     Just tex ->
-     [render vertexShader fragmentShader mesh (uniformsCube theta tex position)]
+     [render vertexShader fragmentShader mesh (uniformsCube thetaX thetaY tex position)]
 
-uniformsCube : Float -> Texture -> Vec3 -> { texture:Texture, rotation:Mat4, perspective:Mat4, camera:Mat4, displacement: Vec3 }
-uniformsCube t texture displacement =
+uniformsCube : Float -> Float -> Texture -> Vec3 -> { texture:Texture, rotation:Mat4, perspective:Mat4, camera:Mat4, displacement: Vec3 }
+uniformsCube tx ty texture displacement =
   { texture = texture
-  , rotation = makeRotate t (vec3 1 0 0) `mul`  makeRotate t (vec3 0 1 0) `mul`  makeRotate t (vec3 0 0 1)
+  , rotation = makeRotate ty (vec3 1 0 0) `mul`  makeRotate tx (vec3 0 1 0) `mul`  makeRotate 0 (vec3 0 0 1)
   , perspective = makePerspective 45 1 0.01 100
   , camera = makeLookAt displacement (displacement `add` k) (vec3 0 1 0)
   , displacement = (vec3 0 0 0)
