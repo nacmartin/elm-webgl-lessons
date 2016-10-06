@@ -1,3 +1,4 @@
+import Keyboard
 import Math.Vector2 exposing (Vec2)
 import Math.Vector3 exposing (..)
 import Math.Matrix4 exposing (..)
@@ -13,17 +14,31 @@ type alias Model =
   { textures : (Maybe Texture, Maybe Texture)
   , theta : Float
   , textureSelected: Int
+  , keys : Keys
   }
 
 
 type Action
   = TexturesError Error
   | TexturesLoaded (Maybe Texture, Maybe Texture)
+  | TextureChange (Model -> Model)
+  | KeyChange (Keys -> Keys)
   | Animate Time
+
+type alias Keys =
+  { left : Bool
+  , right : Bool
+  , up : Bool
+  , down : Bool
+  }
 
 init : (Model, Cmd Action)
 init =
-  ( {textures = (Nothing, Nothing), theta = 0, textureSelected = 2}
+  ( {textures = (Nothing, Nothing)
+  , theta = 0
+  , textureSelected = 1
+  , keys = Keys False False False False
+  }
   , fetchTextures |> Task.perform TexturesError TexturesLoaded
   )
 
@@ -40,6 +55,10 @@ update action model =
       (model, Cmd.none)
     TexturesLoaded textures ->
       ({model | textures = textures}, Cmd.none)
+    TextureChange keyfunc ->
+      ((keyfunc model), Cmd.none)
+    KeyChange keyfunc ->
+      ({model | keys = keyfunc model.keys}, Cmd.none)
     Animate dt ->
       ({model | theta = model.theta + dt / 1000}, Cmd.none)
 
@@ -48,9 +67,39 @@ main =
   Html.program
     { init = init
     , view = view
-    , subscriptions = (\model -> AnimationFrame.diffs Animate)
+    , subscriptions = subscriptions
     , update = update
     }
+
+subscriptions : Model -> Sub Action
+subscriptions _ =
+  [ AnimationFrame.diffs Animate
+  , Keyboard.downs textureChange
+  , Keyboard.downs (keyChange True)
+  , Keyboard.ups (keyChange False)
+  ]
+  |> Sub.batch
+
+textureChange : Keyboard.KeyCode -> Action
+textureChange keyCode =
+  (case keyCode of
+    70 -> \m -> if m.textureSelected == 1 then {m | textureSelected = 2} else {m| textureSelected = 1}
+    -- 37 -> \k -> {k | left = on}
+    -- 39 -> \k -> {k | right = on}
+    -- 38 -> \k -> {k | up = on}
+    -- 40 -> \k -> {k | down = on}
+    _ -> Basics.identity
+  ) |> TextureChange
+
+keyChange : Bool -> Keyboard.KeyCode -> Action
+keyChange on keyCode =
+  (case keyCode of
+    37 -> \k -> {k | left = on}
+    39 -> \k -> {k | right = on}
+    38 -> \k -> {k | up = on}
+    40 -> \k -> {k | down = on}
+    _ -> Basics.identity
+  ) |> KeyChange
 
 -- MESHES
 
@@ -87,7 +136,7 @@ face =
 
 view : Model -> Html Action
 view {textures, theta, textureSelected} =
-  let 
+  let
     (texture1, texture2) = textures
     tex = if textureSelected == 1 then texture1 else texture2
   in
