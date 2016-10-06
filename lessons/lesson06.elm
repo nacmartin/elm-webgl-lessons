@@ -1,3 +1,4 @@
+import Debug
 import Keyboard
 import Math.Vector2 exposing (Vec2)
 import Math.Vector3 exposing (..)
@@ -15,6 +16,7 @@ type alias Model =
   , theta : Float
   , textureSelected: Int
   , keys : Keys
+  , position: Vec3
   }
 
 
@@ -30,6 +32,8 @@ type alias Keys =
   , right : Bool
   , up : Bool
   , down : Bool
+  , w : Bool
+  , s : Bool
   }
 
 init : (Model, Cmd Action)
@@ -37,7 +41,8 @@ init =
   ( {textures = (Nothing, Nothing)
   , theta = 0
   , textureSelected = 1
-  , keys = Keys False False False False
+  , keys = Keys False False False False False False
+  , position = (vec3 0 0 -4)
   }
   , fetchTextures |> Task.perform TexturesError TexturesLoaded
   )
@@ -60,7 +65,25 @@ update action model =
     KeyChange keyfunc ->
       ({model | keys = keyfunc model.keys}, Cmd.none)
     Animate dt ->
-      ({model | theta = model.theta + dt / 1000}, Cmd.none)
+      ( { model
+        | theta = model.theta + dt / 1000
+        , position = model.position
+            |> move model.keys
+        }
+        , Cmd.none
+      )
+
+move : {keys| w: Bool, s: Bool} -> Vec3 -> Vec3
+move k position =
+  let
+    direction =
+      case (k.w, k.s) of
+        (True, False) -> 0.1
+        (False, True) -> -0.1
+        _ -> 0
+  in
+     position `add` (vec3 0 0 direction)
+
 
 main : Program Never
 main =
@@ -74,9 +97,9 @@ main =
 subscriptions : Model -> Sub Action
 subscriptions _ =
   [ AnimationFrame.diffs Animate
-  , Keyboard.downs textureChange
   , Keyboard.downs (keyChange True)
   , Keyboard.ups (keyChange False)
+  , Keyboard.downs textureChange
   ]
   |> Sub.batch
 
@@ -84,10 +107,6 @@ textureChange : Keyboard.KeyCode -> Action
 textureChange keyCode =
   (case keyCode of
     70 -> \m -> if m.textureSelected == 1 then {m | textureSelected = 2} else {m| textureSelected = 1}
-    -- 37 -> \k -> {k | left = on}
-    -- 39 -> \k -> {k | right = on}
-    -- 38 -> \k -> {k | up = on}
-    -- 40 -> \k -> {k | down = on}
     _ -> Basics.identity
   ) |> TextureChange
 
@@ -98,6 +117,8 @@ keyChange on keyCode =
     39 -> \k -> {k | right = on}
     38 -> \k -> {k | up = on}
     40 -> \k -> {k | down = on}
+    87 -> \k -> {k | w = on}
+    83 -> \k -> {k | s = on}
     _ -> Basics.identity
   ) |> KeyChange
 
@@ -135,29 +156,29 @@ face =
 -- VIEW
 
 view : Model -> Html Action
-view {textures, theta, textureSelected} =
+view {textures, theta, textureSelected, position} =
   let
     (texture1, texture2) = textures
     tex = if textureSelected == 1 then texture1 else texture2
   in
-    renderEntity cube theta tex
+    renderEntity cube theta tex position
     |> WebGL.toHtml [ width 400, height 400 ]
 
-renderEntity : Drawable { position:Vec3, coord:Vec3 } -> Float -> Maybe Texture -> List Renderable
-renderEntity mesh theta texture =
+renderEntity : Drawable { position:Vec3, coord:Vec3 } -> Float -> Maybe Texture -> Vec3 -> List Renderable
+renderEntity mesh theta texture position =
   case texture of
     Nothing ->
      []
 
     Just tex ->
-     [render vertexShader fragmentShader mesh (uniformsCube theta tex)]
+     [render vertexShader fragmentShader mesh (uniformsCube theta tex position)]
 
-uniformsCube : Float -> Texture -> { texture:Texture, rotation:Mat4, perspective:Mat4, camera:Mat4, displacement:Vec3 }
-uniformsCube t texture =
+uniformsCube : Float -> Texture -> Vec3 -> { texture:Texture, rotation:Mat4, perspective:Mat4, camera:Mat4, displacement: Vec3 }
+uniformsCube t texture displacement =
   { texture = texture
   , rotation = makeRotate t (vec3 1 0 0) `mul`  makeRotate t (vec3 0 1 0) `mul`  makeRotate t (vec3 0 0 1)
   , perspective = makePerspective 45 1 0.01 100
-  , camera = makeLookAt (vec3 0 0 5) (vec3 0 0 0) (vec3 0 1 0)
+  , camera = makeLookAt displacement (displacement `add` k) (vec3 0 1 0)
   , displacement = (vec3 0 0 0)
   }
 
