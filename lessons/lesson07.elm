@@ -215,22 +215,22 @@ renderEntity mesh thetaX thetaY texture position =
     Just tex ->
      [render vertexShader fragmentShader mesh (uniformsCube thetaX thetaY tex position)]
 
-uniformsCube : Float -> Float -> Texture -> Vec3 -> { texture:Texture, rotation:Mat4, perspective:Mat4, camera:Mat4, normalMatrix: Mat4 }
+uniformsCube : Float -> Float -> Texture -> Vec3 -> { texture:Texture, worldSpace:Mat4, perspective:Mat4, camera:Mat4, normalMatrix: Mat4 }
 uniformsCube tx ty texture displacement =
-  let mv = (rotate tx (vec3 0 1 0) (rotate ty (vec3 1 0 0) (makeTranslate displacement)))
+  let worldSpace = (rotate tx (vec3 0 1 0) (rotate ty (vec3 1 0 0) (makeTranslate displacement)))
       camera = makeLookAt (vec3 0 0 0) (vec3 0 0 -4) (vec3 0 1 0)
       perspective = makePerspective 45 1 0.1 100
   in
     { texture = texture
-    , rotation = mv
+    , worldSpace = worldSpace
     , perspective = perspective
     , camera = camera
-    , normalMatrix = transpose(inverseOrthonormal( mv `mul` camera))
+    , normalMatrix = transpose(inverseOrthonormal( worldSpace `mul` camera))
     }
 
 -- SHADERS
 
-vertexShader : Shader { attr| position:Vec3, coord:Vec3, norm:Vec3 } { unif | rotation:Mat4, perspective:Mat4, camera:Mat4, normalMatrix:Mat4 } { vcoord:Vec2, lightWeighting:Vec3 }
+vertexShader : Shader { attr| position:Vec3, coord:Vec3, norm:Vec3 } { unif | worldSpace:Mat4, perspective:Mat4, camera:Mat4, normalMatrix:Mat4 } { vcoord:Vec2, lightWeighting:Vec3 }
 vertexShader = [glsl|
 
   precision mediump float;
@@ -239,7 +239,7 @@ vertexShader = [glsl|
   attribute vec3 coord;
   attribute vec3 norm;
 
-  uniform mat4 rotation;
+  uniform mat4 worldSpace;
   uniform mat4 perspective;
   uniform mat4 normalMatrix;
   uniform mat4 camera;
@@ -248,7 +248,7 @@ vertexShader = [glsl|
   varying vec3 lightWeighting;
 
   void main() {
-    gl_Position = perspective * camera * rotation * vec4(position, 1.0);
+    gl_Position = perspective * camera * worldSpace * vec4(position, 1.0);
     vcoord = coord.xy;
 
     vec4 transformedNormal = normalMatrix * vec4(norm, 0.0);
