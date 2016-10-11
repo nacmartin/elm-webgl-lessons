@@ -146,30 +146,31 @@ keyChange on keyCode =
 
 -- MESHES
 
-cube : Drawable { position:Vec3, coord:Vec3 }
+cube : Drawable { position:Vec3, coord:Vec3, norm:Vec3 }
 cube =
   Triangle <|
   List.concatMap rotatedFace [ (0,0), (90,0), (180,0), (270,0), (0,90), (0,-90) ]
 
 
-rotatedFace : (Float,Float) -> List ({ position:Vec3, coord:Vec3 }, { position:Vec3, coord:Vec3 }, { position:Vec3, coord:Vec3 })
+rotatedFace : (Float,Float) -> List ({ position:Vec3, coord:Vec3, norm:Vec3  }, { position:Vec3, coord:Vec3, norm:Vec3  }, { position:Vec3, coord:Vec3, norm:Vec3  })
 rotatedFace (angleX,angleY) =
   let
     x = makeRotate (degrees angleX) (vec3 1 0 0)
     y = makeRotate (degrees angleY) (vec3 0 1 0)
     t = x `mul` y `mul` makeTranslate (vec3 0 0 1)
+    normal = Math.Vector3.negate (normalize(transform t (vec3 0 0 1)) )
     each f (a,b,c) =
       (f a, f b, f c)
   in
-    List.map (each (\x -> {x | position = transform t x.position })) face
+    List.map (each (\x -> {x | position = transform t x.position, norm = normal })) face
 
-face : List ({ position:Vec3, coord:Vec3 }, { position:Vec3, coord:Vec3 }, { position:Vec3, coord:Vec3 })
+face : List ({ position:Vec3, coord:Vec3, norm:Vec3 }, { position:Vec3, coord:Vec3, norm:Vec3 }, { position:Vec3, coord:Vec3, norm:Vec3 })
 face =
   let
-    topLeft     = { position = vec3 -1  1 0, coord = vec3 0 1 0 }
-    topRight    = { position = vec3  1  1 0, coord = vec3 1 1 0 }
-    bottomLeft  = { position = vec3 -1 -1 0, coord = vec3 0 0 0 }
-    bottomRight = { position = vec3  1 -1 0, coord = vec3 1 0 0 }
+    topLeft     = { position = vec3 -1  1 0, coord = vec3 0 1 0, norm = vec3 0 0 1 }
+    topRight    = { position = vec3  1  1 0, coord = vec3 1 1 0, norm = vec3 0 0 1 }
+    bottomLeft  = { position = vec3 -1 -1 0, coord = vec3 0 0 0, norm = vec3 0 0 1 }
+    bottomRight = { position = vec3  1 -1 0, coord = vec3 1 0 0, norm = vec3 0 0 1 }
   in
     [ (topLeft,topRight,bottomLeft)
     , (bottomLeft,topRight,bottomRight)
@@ -205,7 +206,7 @@ message =
     "Keys are: Right/Left/Up/Down rotate, w/s -> move camera in/out"
 
 
-renderEntity : Drawable { position:Vec3, coord:Vec3 } -> Float -> Float -> Maybe Texture -> Vec3 -> List Renderable
+renderEntity : Drawable { position:Vec3, coord:Vec3, norm: Vec3 } -> Float -> Float -> Maybe Texture -> Vec3 -> List Renderable
 renderEntity mesh thetaX thetaY texture position =
   case texture of
     Nothing ->
@@ -214,43 +215,59 @@ renderEntity mesh thetaX thetaY texture position =
     Just tex ->
      [render vertexShader fragmentShader mesh (uniformsCube thetaX thetaY tex position)]
 
-uniformsCube : Float -> Float -> Texture -> Vec3 -> { texture:Texture, rotation:Mat4, perspective:Mat4, camera:Mat4, displacement: Vec3 }
+uniformsCube : Float -> Float -> Texture -> Vec3 -> { texture:Texture, rotation:Mat4, perspective:Mat4, camera:Mat4, normalMatrix: Mat4 }
 uniformsCube tx ty texture displacement =
-  { texture = texture
-  , rotation = makeRotate ty (vec3 1 0 0) `mul`  makeRotate tx (vec3 0 1 0) `mul`  makeRotate 0 (vec3 0 0 1)
-  , perspective = makePerspective 45 1 0.01 100
-  , camera = makeLookAt displacement (displacement `add` k) (vec3 0 1 0)
-  , displacement = (vec3 0 0 0)
-  }
+  let mv = (rotate tx (vec3 0 1 0) (rotate ty (vec3 1 0 0) (makeTranslate displacement)))
+      camera = makeLookAt (vec3 0 0 0) (vec3 0 0 -4) (vec3 0 1 0)
+      perspective = makePerspective 45 1 0.1 100
+  in
+    { texture = texture
+    , rotation = mv
+    , perspective = perspective
+    , camera = camera
+    , normalMatrix = transpose(inverseOrthonormal( mv `mul` camera))
+    }
 
 -- SHADERS
 
-vertexShader : Shader { attr| position:Vec3, coord:Vec3 } { unif | rotation:Mat4, displacement:Vec3, perspective:Mat4, camera:Mat4 } { vcoord:Vec2 }
+vertexShader : Shader { attr| position:Vec3, coord:Vec3, norm:Vec3 } { unif | rotation:Mat4, perspective:Mat4, camera:Mat4, normalMatrix:Mat4 } { vcoord:Vec2, lightWeighting:Vec3 }
 vertexShader = [glsl|
 
   precision mediump float;
+
   attribute vec3 position;
   attribute vec3 coord;
+  attribute vec3 norm;
+
   uniform mat4 rotation;
-  uniform vec3 displacement;
   uniform mat4 perspective;
+  uniform mat4 normalMatrix;
   uniform mat4 camera;
+
   varying vec2 vcoord;
+  varying vec3 lightWeighting;
 
   void main() {
-    gl_Position = perspective * camera * rotation * vec4(position, 1.0) + vec4(displacement, 1);
+    gl_Position = perspective * camera * rotation * vec4(position, 1.0);
     vcoord = coord.xy;
+
+    vec4 transformedNormal = normalMatrix * vec4(norm, 0.0);
+    float directionalLightWeighting = max(dot(transformedNormal, vec4(-0.25, -0.25,  -1, 0)), 0.0);
+    lightWeighting = vec3(0.5, 0.5, 1) + vec3(1, 0, 0) * directionalLightWeighting;
   }
 |]
 
-fragmentShader : Shader {} { unif | texture:Texture } { vcoord:Vec2 }
+fragmentShader : Shader {} { unif | texture:Texture } { vcoord:Vec2, lightWeighting:Vec3 }
 fragmentShader = [glsl|
   precision mediump float;
+
   uniform sampler2D texture;
   varying vec2 vcoord;
+  varying vec3 lightWeighting;
 
   void main () {
-      gl_FragColor = texture2D(texture, vcoord);
+      vec4 textureColor = texture2D(texture, vec2(vcoord.s, vcoord.t));
+      gl_FragColor = vec4(textureColor.rgb * lightWeighting, textureColor.a);
   }
 
 |]
