@@ -1,16 +1,17 @@
 import Debug
 import Keyboard
+import String exposing (toFloat)
 import Math.Vector2 exposing (Vec2)
 import Math.Vector3 exposing (..)
 import Math.Matrix4 exposing (..)
 import Task exposing (Task)
 import Time exposing (Time)
 import WebGL exposing (..)
-import Html exposing (Html, text, div, input)
+import Html exposing (Html, text, div, input, h2)
 import Html.App as Html
 import Html.Events exposing (onInput, onClick)
 import AnimationFrame
-import Html.Attributes exposing (width, height, style, type', checked)
+import Html.Attributes exposing (width, height, style, type', checked, step, value)
 
 type alias Model =
   { texture : Maybe Texture
@@ -21,6 +22,9 @@ type alias Model =
   , rx: Float
   , ry: Float
   , lighting: Bool
+  , directionalColour: Vec3
+  , ambientColour: Vec3
+  , directional: Vec3
   }
 
 
@@ -31,6 +35,15 @@ type Action
   | KeyChange (Keys -> Keys)
   | Animate Time
   | UseLighting
+  | ChangeDirectionalColourR String
+  | ChangeDirectionalColourG String
+  | ChangeDirectionalColourB String
+  | ChangeAmbientColourR String
+  | ChangeAmbientColourG String
+  | ChangeAmbientColourB String
+  | ChangeDirectionalX String
+  | ChangeDirectionalY String
+  | ChangeDirectionalZ String
 
 type alias Keys =
   { left : Bool
@@ -51,6 +64,9 @@ init =
   , keys = Keys False False False False False False
   , position = (vec3 0 0 -4)
   , lighting = True
+  , directionalColour = (vec3 0.8 0.2 0.2)
+  , ambientColour = (vec3 1.0 0.2 0.8)
+  , directional = (vec3 -0.25 -0.25 -1)
   }
   , fetchTextures |> Task.perform TexturesError TexturesLoaded
   )
@@ -86,6 +102,78 @@ update action model =
       )
     UseLighting ->
         ( { model | lighting = not model.lighting }, Cmd.none )
+    ChangeDirectionalX value ->
+        let
+            parsed =
+                case String.toFloat value of
+                    Ok value -> value
+                    _ -> getX model.directional
+        in
+           ( { model | directional = setX parsed model.directional }, Cmd.none )
+    ChangeDirectionalY value ->
+        let
+            parsed =
+                case String.toFloat value of
+                    Ok value -> value
+                    _ -> getY model.directional
+        in
+           ( { model | directional = setY parsed model.directional }, Cmd.none )
+    ChangeDirectionalZ value ->
+        let
+            parsed =
+                case String.toFloat value of
+                    Ok value -> value
+                    _ -> getZ model.directional
+        in
+           ( { model | directional = setZ parsed model.directional }, Cmd.none )
+    ChangeDirectionalColourR value ->
+        let
+            parsed =
+                case String.toFloat value of
+                    Ok value -> value
+                    _ -> getX model.directionalColour
+        in
+           ( { model | directionalColour = setX parsed model.directionalColour }, Cmd.none )
+    ChangeDirectionalColourG value ->
+        let
+            parsed =
+                case String.toFloat value of
+                    Ok value -> value
+                    _ -> getY model.directionalColour
+        in
+           ( { model | directionalColour = setY parsed model.directionalColour }, Cmd.none )
+    ChangeDirectionalColourB value ->
+        let
+            parsed =
+                case String.toFloat value of
+                    Ok value -> value
+                    _ -> getZ model.directionalColour
+        in
+           ( { model | directionalColour = setZ parsed model.directionalColour }, Cmd.none )
+    ChangeAmbientColourR value ->
+        let
+            parsed =
+                case String.toFloat value of
+                    Ok value -> value
+                    _ -> getX model.ambientColour
+        in
+           ( { model | ambientColour = setX parsed model.ambientColour }, Cmd.none )
+    ChangeAmbientColourG value ->
+        let
+            parsed =
+                case String.toFloat value of
+                    Ok value -> value
+                    _ -> getY model.ambientColour
+        in
+           ( { model | ambientColour = setY parsed model.ambientColour }, Cmd.none )
+    ChangeAmbientColourB value ->
+        let
+            parsed =
+                case String.toFloat value of
+                    Ok value -> value
+                    _ -> getZ model.ambientColour
+        in
+           ( { model | ambientColour = setZ parsed model.ambientColour }, Cmd.none )
 
 rotateX : {keys| right: Bool, left: Bool} -> Float -> Float
 rotateX k velocity =
@@ -185,9 +273,9 @@ face =
 -- VIEW
 
 view : Model -> Html Action
-view {texture, thetaX, thetaY, position, rx, ry, lighting} =
+view {texture, thetaX, thetaY, position, rx, ry, lighting, directionalColour, directional, ambientColour} =
   let
-    entities = renderEntity cube thetaX thetaY texture position lighting
+    entities = renderEntity cube thetaX thetaY texture position lighting directionalColour directional ambientColour
   in
     div
       []
@@ -197,7 +285,6 @@ view {texture, thetaX, thetaY, position, rx, ry, lighting} =
       , div
         [ style
           [ ("position", "absolute")
-          , ("font-family", "monospace")
           , ("left", "20px")
           , ("right", "20px")
           , ("top", "500px")
@@ -208,7 +295,35 @@ view {texture, thetaX, thetaY, position, rx, ry, lighting} =
           , text " Use lighting"
           ]
         , div []
-          [ input [] []
+          [ h2 [] [ text "Directional Light"]
+          , div []
+            [ text "Direction: "
+            , text " x: "
+            , input [type' "text", step "0.01", onInput ChangeDirectionalX, value (toString (getX directional))] []
+            , text " y: "
+            , input [type' "text", step "0.01", onInput ChangeDirectionalY, value (toString (getY directional))] []
+            , text " z: "
+            , input [type' "text", step "0.01", onInput ChangeDirectionalZ, value (toString (getZ directional))] []
+            ]
+          , div []
+            [ text "Colour: "
+            , text " R: "
+            , input [type' "text", step "0.01", onInput ChangeDirectionalColourR, value (toString (getX directionalColour))] []
+            , text " G: "
+            , input [type' "text", step "0.01", onInput ChangeDirectionalColourG, value (toString (getY directionalColour))] []
+            , text " B: "
+            , input [type' "text", step "0.01", onInput ChangeDirectionalColourB, value (toString (getZ directionalColour))] []
+            ]
+          , h2 [] [ text "Ambient Light"]
+          , div []
+            [ text "Colour: "
+            , text " R: "
+            , input [type' "text", step "0.01", onInput ChangeAmbientColourR, value (toString (getX ambientColour))] []
+            , text " G: "
+            , input [type' "text", step "0.01", onInput ChangeAmbientColourG, value (toString (getY ambientColour))] []
+            , text " B: "
+            , input [type' "text", step "0.01", onInput ChangeAmbientColourB, value (toString (getZ ambientColour))] []
+            ]
           ]
         , text message
         ]
@@ -219,17 +334,17 @@ message =
     "Keys are: Right/Left/Up/Down rotate, w/s -> move camera in/out"
 
 
-renderEntity : Drawable { position:Vec3, coord:Vec3, norm: Vec3 } -> Float -> Float -> Maybe Texture -> Vec3 -> Bool -> List Renderable
-renderEntity mesh thetaX thetaY texture position lighting =
+renderEntity : Drawable { position:Vec3, coord:Vec3, norm: Vec3 } -> Float -> Float -> Maybe Texture -> Vec3 -> Bool -> Vec3 -> Vec3 -> Vec3 -> List Renderable
+renderEntity mesh thetaX thetaY texture position lighting directionalColour directional ambientColour =
   case texture of
     Nothing ->
      []
 
     Just tex ->
-     [render vertexShader fragmentShader mesh (uniformsCube thetaX thetaY tex position lighting)]
+     [render vertexShader fragmentShader mesh (uniformsCube thetaX thetaY tex position lighting directionalColour directional ambientColour)]
 
-uniformsCube : Float -> Float -> Texture -> Vec3 -> Bool -> { texture:Texture, worldSpace:Mat4, perspective:Mat4, camera:Mat4, normalMatrix: Mat4, lighting: Bool }
-uniformsCube tx ty texture displacement lighting=
+uniformsCube : Float -> Float -> Texture -> Vec3 -> Bool -> Vec3 -> Vec3 -> Vec3 -> { texture:Texture, worldSpace:Mat4, perspective:Mat4, camera:Mat4, normalMatrix: Mat4, lighting: Bool, directionalColour: Vec3, ambientColour: Vec3, directional: Vec3 }
+uniformsCube tx ty texture displacement lighting directionalColour directional ambientColour=
   let worldSpace = (rotate tx (vec3 0 1 0) (rotate ty (vec3 1 0 0) (makeTranslate displacement)))
       camera = makeLookAt (vec3 0 0 0) (vec3 0 0 -4) (vec3 0 1 0)
       perspective = makePerspective 45 1 0.1 100
@@ -241,11 +356,14 @@ uniformsCube tx ty texture displacement lighting=
     , camera = camera
     , normalMatrix = transpose(inverseOrthonormal( worldSpace `mul` camera))
     , lighting = lighting
+    , directionalColour = directionalColour
+    , ambientColour = ambientColour
+    , directional = directional
     }
 
 -- SHADERS
 
-vertexShader : Shader { attr| position:Vec3, coord:Vec3, norm:Vec3 } { unif | worldSpace:Mat4, perspective:Mat4, camera:Mat4, normalMatrix:Mat4, lighting:Bool } { vcoord:Vec2, lightWeighting:Vec3 }
+vertexShader : Shader { attr| position:Vec3, coord:Vec3, norm:Vec3 } { unif | worldSpace:Mat4, perspective:Mat4, camera:Mat4, normalMatrix:Mat4, lighting:Bool, directionalColour:Vec3, ambientColour:Vec3, directional: Vec3 } { vcoord:Vec2, lightWeighting:Vec3 }
 vertexShader = [glsl|
 
   precision mediump float;
@@ -259,6 +377,9 @@ vertexShader = [glsl|
   uniform mat4 normalMatrix;
   uniform mat4 camera;
   uniform bool lighting;
+  uniform vec3 directionalColour;
+  uniform vec3 directional;
+  uniform vec3 ambientColour;
 
   varying vec2 vcoord;
   varying vec3 lightWeighting;
@@ -271,8 +392,8 @@ vertexShader = [glsl|
       lightWeighting = vec3(1.0, 1.0, 1.0);
     } else {
       vec4 transformedNormal = normalMatrix * vec4(norm, 0.0);
-      float directionalLightWeighting = max(dot(transformedNormal, vec4(-0.25, -0.25,  -1, 0)), 0.0);
-      lightWeighting = vec3(0.5, 0.5, 1) + vec3(1, 0, 0) * directionalLightWeighting;
+      float directionalLightWeighting = max(dot(transformedNormal, vec4(directional, 0)), 0.0);
+      lightWeighting = ambientColour + directionalColour * directionalLightWeighting;
     }
   }
 |]
