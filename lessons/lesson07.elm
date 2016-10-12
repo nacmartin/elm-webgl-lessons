@@ -65,7 +65,7 @@ init =
   , position = (vec3 0 0 -4)
   , lighting = True
   , directionalColour = (vec3 0.8 0.2 0.2)
-  , ambientColour = (vec3 1.0 0.2 0.8)
+  , ambientColour = (vec3 0.2 0.2 0.8)
   , directional = (vec3 -0.25 -0.25 -1)
   }
   , fetchTextures |> Task.perform TexturesError TexturesLoaded
