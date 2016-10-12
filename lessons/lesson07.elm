@@ -6,10 +6,11 @@ import Math.Matrix4 exposing (..)
 import Task exposing (Task)
 import Time exposing (Time)
 import WebGL exposing (..)
-import Html exposing (Html, text, div)
+import Html exposing (Html, text, div, input)
 import Html.App as Html
+import Html.Events exposing (onInput, onClick)
 import AnimationFrame
-import Html.Attributes exposing (width, height, style)
+import Html.Attributes exposing (width, height, style, type', checked)
 
 type alias Model =
   { texture : Maybe Texture
@@ -19,6 +20,7 @@ type alias Model =
   , position: Vec3
   , rx: Float
   , ry: Float
+  , lighting: Bool
   }
 
 
@@ -28,6 +30,7 @@ type Action
   | TextureChange (Model -> Model)
   | KeyChange (Keys -> Keys)
   | Animate Time
+  | UseLighting
 
 type alias Keys =
   { left : Bool
@@ -47,6 +50,7 @@ init =
   , ry = 0
   , keys = Keys False False False False False False
   , position = (vec3 0 0 -4)
+  , lighting = True
   }
   , fetchTextures |> Task.perform TexturesError TexturesLoaded
   )
@@ -80,6 +84,8 @@ update action model =
         }
         , Cmd.none
       )
+    UseLighting ->
+        ( { model | lighting = not model.lighting }, Cmd.none )
 
 rotateX : {keys| right: Bool, left: Bool} -> Float -> Float
 rotateX k velocity =
@@ -179,26 +185,33 @@ face =
 -- VIEW
 
 view : Model -> Html Action
-view {texture, thetaX, thetaY, position, rx, ry} =
+view {texture, thetaX, thetaY, position, rx, ry, lighting} =
   let
-    entities = renderEntity cube thetaX thetaY texture position
+    entities = renderEntity cube thetaX thetaY texture position lighting
   in
     div
       []
       [ WebGL.toHtml
-          [ width 400, height 400 ]
-          entities
+        [ width 400, height 400 ]
+        entities
       , div
-          [ style
-              [ ("position", "absolute")
-              , ("font-family", "monospace")
-              , ("text-align", "center")
-              , ("left", "20px")
-              , ("right", "20px")
-              , ("top", "500px")
-              ]
+        [ style
+          [ ("position", "absolute")
+          , ("font-family", "monospace")
+          , ("left", "20px")
+          , ("right", "20px")
+          , ("top", "500px")
           ]
-          [ text message]
+        ]
+        [ div []
+          [ input [type' "checkbox", onClick UseLighting, checked lighting] []
+          , text " Use lighting"
+          ]
+        , div []
+          [ input [] []
+          ]
+        , text message
+        ]
       ]
 
 message : String
@@ -206,31 +219,33 @@ message =
     "Keys are: Right/Left/Up/Down rotate, w/s -> move camera in/out"
 
 
-renderEntity : Drawable { position:Vec3, coord:Vec3, norm: Vec3 } -> Float -> Float -> Maybe Texture -> Vec3 -> List Renderable
-renderEntity mesh thetaX thetaY texture position =
+renderEntity : Drawable { position:Vec3, coord:Vec3, norm: Vec3 } -> Float -> Float -> Maybe Texture -> Vec3 -> Bool -> List Renderable
+renderEntity mesh thetaX thetaY texture position lighting =
   case texture of
     Nothing ->
      []
 
     Just tex ->
-     [render vertexShader fragmentShader mesh (uniformsCube thetaX thetaY tex position)]
+     [render vertexShader fragmentShader mesh (uniformsCube thetaX thetaY tex position lighting)]
 
-uniformsCube : Float -> Float -> Texture -> Vec3 -> { texture:Texture, worldSpace:Mat4, perspective:Mat4, camera:Mat4, normalMatrix: Mat4 }
-uniformsCube tx ty texture displacement =
+uniformsCube : Float -> Float -> Texture -> Vec3 -> Bool -> { texture:Texture, worldSpace:Mat4, perspective:Mat4, camera:Mat4, normalMatrix: Mat4, lighting: Bool }
+uniformsCube tx ty texture displacement lighting=
   let worldSpace = (rotate tx (vec3 0 1 0) (rotate ty (vec3 1 0 0) (makeTranslate displacement)))
       camera = makeLookAt (vec3 0 0 0) (vec3 0 0 -4) (vec3 0 1 0)
       perspective = makePerspective 45 1 0.1 100
+
   in
     { texture = texture
     , worldSpace = worldSpace
     , perspective = perspective
     , camera = camera
     , normalMatrix = transpose(inverseOrthonormal( worldSpace `mul` camera))
+    , lighting = lighting
     }
 
 -- SHADERS
 
-vertexShader : Shader { attr| position:Vec3, coord:Vec3, norm:Vec3 } { unif | worldSpace:Mat4, perspective:Mat4, camera:Mat4, normalMatrix:Mat4 } { vcoord:Vec2, lightWeighting:Vec3 }
+vertexShader : Shader { attr| position:Vec3, coord:Vec3, norm:Vec3 } { unif | worldSpace:Mat4, perspective:Mat4, camera:Mat4, normalMatrix:Mat4, lighting:Bool } { vcoord:Vec2, lightWeighting:Vec3 }
 vertexShader = [glsl|
 
   precision mediump float;
@@ -243,6 +258,7 @@ vertexShader = [glsl|
   uniform mat4 perspective;
   uniform mat4 normalMatrix;
   uniform mat4 camera;
+  uniform bool lighting;
 
   varying vec2 vcoord;
   varying vec3 lightWeighting;
@@ -251,9 +267,13 @@ vertexShader = [glsl|
     gl_Position = perspective * camera * worldSpace * vec4(position, 1.0);
     vcoord = coord.xy;
 
-    vec4 transformedNormal = normalMatrix * vec4(norm, 0.0);
-    float directionalLightWeighting = max(dot(transformedNormal, vec4(-0.25, -0.25,  -1, 0)), 0.0);
-    lightWeighting = vec3(0.5, 0.5, 1) + vec3(1, 0, 0) * directionalLightWeighting;
+    if (!lighting) {
+      lightWeighting = vec3(1.0, 1.0, 1.0);
+    } else {
+      vec4 transformedNormal = normalMatrix * vec4(norm, 0.0);
+      float directionalLightWeighting = max(dot(transformedNormal, vec4(-0.25, -0.25,  -1, 0)), 0.0);
+      lightWeighting = vec3(0.5, 0.5, 1) + vec3(1, 0, 0) * directionalLightWeighting;
+    }
   }
 |]
 
