@@ -36,7 +36,6 @@ type alias Triplet =
   , z : String
   }
 
-
 type Action
   = TexturesError Error
   | TexturesLoaded (Maybe Texture)

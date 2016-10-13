@@ -24,11 +24,19 @@ type alias Model =
   , lighting: Bool
   , blending: Bool
   , alpha: Float
+  , directionalColourText: {x:String, y:String, z:String}
   , directionalColour: Vec3
+  , ambientColourText: {x:String, y:String, z:String}
   , ambientColour: Vec3
+  , directionalText: {x:String, y:String, z:String}
   , directional: Vec3
   }
 
+type alias Triplet =
+  { x : String
+  , y : String
+  , z : String
+  }
 
 type Action
   = TexturesError Error
@@ -70,8 +78,11 @@ init =
   , lighting = True
   , blending = True
   , alpha = 0.5
+  , directionalColourText = {x="0.8", y="0.2", z="0.2"}
   , directionalColour = (vec3 0.8 0.2 0.2)
+  , ambientColourText = {x="0.2", y="0.2", z="0.9"}
   , ambientColour = (vec3 0.2 0.2 0.8)
+  , directionalText = {x="-0.25", y="0.25", z="-1"}
   , directional = (vec3 -0.25 -0.25 -1)
   }
   , fetchTextures |> Task.perform TexturesError TexturesLoaded
@@ -120,76 +131,74 @@ update action model =
            ( { model | alpha = parsed }, Cmd.none )
     ChangeDirectionalX value ->
         let
-            parsed =
-                case String.toFloat value of
-                    Ok value -> value
-                    _ -> getX model.directional
+            (numeric, textual) = updateAndParseX model.directional model.directionalText value
         in
-           ( { model | directional = setX parsed model.directional }, Cmd.none )
+           ( { model | directional = numeric, directionalText = textual }, Cmd.none )
     ChangeDirectionalY value ->
         let
-            parsed =
-                case String.toFloat value of
-                    Ok value -> value
-                    _ -> getY model.directional
+            (numeric, textual) = updateAndParseY model.directional model.directionalText value
         in
-           ( { model | directional = setY parsed model.directional }, Cmd.none )
+           ( { model | directional = numeric, directionalText = textual }, Cmd.none )
     ChangeDirectionalZ value ->
         let
-            parsed =
-                case String.toFloat value of
-                    Ok value -> value
-                    _ -> getZ model.directional
+            (numeric, textual) = updateAndParseZ model.directional model.directionalText value
         in
-           ( { model | directional = setZ parsed model.directional }, Cmd.none )
+           ( { model | directional = numeric, directionalText = textual }, Cmd.none )
     ChangeDirectionalColourR value ->
         let
-            parsed =
-                case String.toFloat value of
-                    Ok value -> value
-                    _ -> getX model.directionalColour
+            (numeric, textual) = updateAndParseX model.directionalColour model.directionalColourText value
         in
-           ( { model | directionalColour = setX parsed model.directionalColour }, Cmd.none )
+           ( { model | directionalColour = numeric, directionalColourText = textual }, Cmd.none )
     ChangeDirectionalColourG value ->
         let
-            parsed =
-                case String.toFloat value of
-                    Ok value -> value
-                    _ -> getY model.directionalColour
+            (numeric, textual) = updateAndParseY model.directionalColour model.directionalColourText value
         in
-           ( { model | directionalColour = setY parsed model.directionalColour }, Cmd.none )
+           ( { model | directionalColour = numeric, directionalColourText = textual }, Cmd.none )
     ChangeDirectionalColourB value ->
         let
-            parsed =
-                case String.toFloat value of
-                    Ok value -> value
-                    _ -> getZ model.directionalColour
+            (numeric, textual) = updateAndParseZ model.directionalColour model.directionalColourText value
         in
-           ( { model | directionalColour = setZ parsed model.directionalColour }, Cmd.none )
+           ( { model | directionalColour = numeric, directionalColourText = textual }, Cmd.none )
     ChangeAmbientColourR value ->
         let
-            parsed =
-                case String.toFloat value of
-                    Ok value -> value
-                    _ -> getX model.ambientColour
+            (numeric, textual) = updateAndParseX model.ambientColour model.ambientColourText value
         in
-           ( { model | ambientColour = setX parsed model.ambientColour }, Cmd.none )
+           ( { model | ambientColour = numeric, ambientColourText = textual }, Cmd.none )
     ChangeAmbientColourG value ->
         let
-            parsed =
-                case String.toFloat value of
-                    Ok value -> value
-                    _ -> getY model.ambientColour
+            (numeric, textual) = updateAndParseY model.ambientColour model.ambientColourText value
         in
-           ( { model | ambientColour = setY parsed model.ambientColour }, Cmd.none )
+           ( { model | ambientColour = numeric, ambientColourText = textual }, Cmd.none )
     ChangeAmbientColourB value ->
         let
-            parsed =
-                case String.toFloat value of
-                    Ok value -> value
-                    _ -> getZ model.ambientColour
+            (numeric, textual) = updateAndParseZ model.ambientColour model.ambientColourText value
         in
-           ( { model | ambientColour = setZ parsed model.ambientColour }, Cmd.none )
+           ( { model | ambientColour = numeric, ambientColourText = textual }, Cmd.none )
+
+updateAndParseX:  Vec3 -> Triplet -> String -> (Vec3, Triplet)
+updateAndParseX default textual value =
+  let text = { textual | x = value }
+  in
+    updateAndParse default text
+
+updateAndParseY:  Vec3 -> Triplet -> String -> (Vec3, Triplet)
+updateAndParseY default textual value =
+  let text = { textual | y = value }
+  in
+    updateAndParse default text
+
+updateAndParseZ:  Vec3 -> Triplet -> String -> (Vec3, Triplet)
+updateAndParseZ default textual value =
+  let text = { textual | z = value }
+  in
+    updateAndParse default text
+
+updateAndParse: Vec3 -> Triplet -> (Vec3, Triplet)
+updateAndParse default text =
+  case (String.toFloat text.x, String.toFloat text.y, String.toFloat text.z) of
+      (Ok vr, Ok vg, Ok vb) -> (vec3 vr vg vb, text)
+      _ -> ( default, text )
+
 
 rotateX : {keys| right: Bool, left: Bool} -> Float -> Float
 rotateX k velocity =
@@ -289,7 +298,7 @@ face =
 -- VIEW
 
 view : Model -> Html Action
-view {texture, thetaX, thetaY, position, rx, ry, lighting, alpha, blending, directionalColour, directional, ambientColour} =
+view {texture, thetaX, thetaY, position, rx, ry, lighting, alpha, blending, directionalColour, directional, ambientColour, directionalColourText, ambientColourText, directionalText} =
   let
     entities = renderEntity cube thetaX thetaY texture position lighting blending alpha directionalColour directional ambientColour
   in
@@ -321,30 +330,30 @@ view {texture, thetaX, thetaY, position, rx, ry, lighting, alpha, blending, dire
           , div []
             [ text "Direction: "
             , text " x: "
-            , input [type' "text", step "0.01", onInput ChangeDirectionalX, value (toString (getX directional))] []
+            , input [type' "text", step "0.01", onInput ChangeDirectionalX, value directionalText.x] []
             , text " y: "
-            , input [type' "text", step "0.01", onInput ChangeDirectionalY, value (toString (getY directional))] []
+            , input [type' "text", step "0.01", onInput ChangeDirectionalY, value directionalText.y] []
             , text " z: "
-            , input [type' "text", step "0.01", onInput ChangeDirectionalZ, value (toString (getZ directional))] []
+            , input [type' "text", step "0.01", onInput ChangeDirectionalZ, value directionalText.z] []
             ]
           , div []
             [ text "Colour: "
             , text " R: "
-            , input [type' "text", step "0.01", onInput ChangeDirectionalColourR, value (toString (getX directionalColour))] []
+            , input [type' "text", step "0.01", onInput ChangeDirectionalColourR, value directionalColourText.x] []
             , text " G: "
-            , input [type' "text", step "0.01", onInput ChangeDirectionalColourG, value (toString (getY directionalColour))] []
+            , input [type' "text", step "0.01", onInput ChangeDirectionalColourG, value directionalColourText.y] []
             , text " B: "
-            , input [type' "text", step "0.01", onInput ChangeDirectionalColourB, value (toString (getZ directionalColour))] []
+            , input [type' "text", step "0.01", onInput ChangeDirectionalColourB, value directionalColourText.z] []
             ]
           , h2 [] [ text "Ambient Light"]
           , div []
             [ text "Colour: "
             , text " R: "
-            , input [type' "text", step "0.01", onInput ChangeAmbientColourR, value (toString (getX ambientColour))] []
+            , input [type' "text", step "0.01", onInput ChangeAmbientColourR, value ambientColourText.x] []
             , text " G: "
-            , input [type' "text", step "0.01", onInput ChangeAmbientColourG, value (toString (getY ambientColour))] []
+            , input [type' "text", step "0.01", onInput ChangeAmbientColourG, value ambientColourText.y] []
             , text " B: "
-            , input [type' "text", step "0.01", onInput ChangeAmbientColourB, value (toString (getZ ambientColour))] []
+            , input [type' "text", step "0.01", onInput ChangeAmbientColourB, value ambientColourText.z] []
             ]
           ]
         , text message
