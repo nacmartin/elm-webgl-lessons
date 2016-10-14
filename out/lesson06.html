@@ -5166,6 +5166,10 @@ var _elm_community$elm_webgl$Native_WebGL = function () {
             gl.bindTexture(gl.TEXTURE_2D, tex);
             gl.uniform1i(uniformLocation, currentTexture);
           };
+        case gl.BOOL:
+          return function (value) {
+            gl.uniform1i(uniformLocation, value);
+          };
         default:
           LOG('Unsupported uniform type: ' + uniform.type);
           return function () {};
@@ -11819,7 +11823,12 @@ var _user$project$Main$view = function (_p5) {
 				_elm_lang$core$Native_List.fromArray(
 					[
 						_elm_lang$html$Html_Attributes$width(400),
-						_elm_lang$html$Html_Attributes$height(400)
+						_elm_lang$html$Html_Attributes$height(400),
+						_elm_lang$html$Html_Attributes$style(
+						_elm_lang$core$Native_List.fromArray(
+							[
+								{ctor: '_Tuple2', _0: 'backgroundColor', _1: 'black'}
+							]))
 					]),
 				entities),
 				A2(

@@ -12005,10 +12005,49 @@ var _user$project$Main$rotateX = F2(
 		}();
 		return velocity + direction;
 	});
+var _user$project$Main$updateAndParse = F2(
+	function ($default, text) {
+		var _p8 = {
+			ctor: '_Tuple3',
+			_0: _elm_lang$core$String$toFloat(text.x),
+			_1: _elm_lang$core$String$toFloat(text.y),
+			_2: _elm_lang$core$String$toFloat(text.z)
+		};
+		if ((((_p8.ctor === '_Tuple3') && (_p8._0.ctor === 'Ok')) && (_p8._1.ctor === 'Ok')) && (_p8._2.ctor === 'Ok')) {
+			return {
+				ctor: '_Tuple2',
+				_0: A3(_elm_community$elm_linear_algebra$Math_Vector3$vec3, _p8._0._0, _p8._1._0, _p8._2._0),
+				_1: text
+			};
+		} else {
+			return {ctor: '_Tuple2', _0: $default, _1: text};
+		}
+	});
+var _user$project$Main$updateAndParseZ = F3(
+	function ($default, textual, value) {
+		var text = _elm_lang$core$Native_Utils.update(
+			textual,
+			{z: value});
+		return A2(_user$project$Main$updateAndParse, $default, text);
+	});
+var _user$project$Main$updateAndParseY = F3(
+	function ($default, textual, value) {
+		var text = _elm_lang$core$Native_Utils.update(
+			textual,
+			{y: value});
+		return A2(_user$project$Main$updateAndParse, $default, text);
+	});
+var _user$project$Main$updateAndParseX = F3(
+	function ($default, textual, value) {
+		var text = _elm_lang$core$Native_Utils.update(
+			textual,
+			{x: value});
+		return A2(_user$project$Main$updateAndParse, $default, text);
+	});
 var _user$project$Main$update = F2(
 	function (action, model) {
-		var _p8 = action;
-		switch (_p8.ctor) {
+		var _p9 = action;
+		switch (_p9.ctor) {
 			case 'TexturesError':
 				return {ctor: '_Tuple2', _0: model, _1: _elm_lang$core$Platform_Cmd$none};
 			case 'TexturesLoaded':
@@ -12016,13 +12055,13 @@ var _user$project$Main$update = F2(
 					ctor: '_Tuple2',
 					_0: _elm_lang$core$Native_Utils.update(
 						model,
-						{texture: _p8._0}),
+						{texture: _p9._0}),
 					_1: _elm_lang$core$Platform_Cmd$none
 				};
 			case 'TextureChange':
 				return {
 					ctor: '_Tuple2',
-					_0: _p8._0(model),
+					_0: _p9._0(model),
 					_1: _elm_lang$core$Platform_Cmd$none
 				};
 			case 'KeyChange':
@@ -12031,19 +12070,19 @@ var _user$project$Main$update = F2(
 					_0: _elm_lang$core$Native_Utils.update(
 						model,
 						{
-							keys: _p8._0(model.keys)
+							keys: _p9._0(model.keys)
 						}),
 					_1: _elm_lang$core$Platform_Cmd$none
 				};
 			case 'Animate':
-				var _p9 = _p8._0;
+				var _p10 = _p9._0;
 				return {
 					ctor: '_Tuple2',
 					_0: _elm_lang$core$Native_Utils.update(
 						model,
 						{
-							thetaX: model.thetaX + ((model.rx * _p9) / 1000),
-							thetaY: model.thetaY + ((model.ry * _p9) / 1000),
+							thetaX: model.thetaX + ((model.rx * _p10) / 1000),
+							thetaY: model.thetaY + ((model.ry * _p10) / 1000),
 							position: A2(_user$project$Main$move, model.keys, model.position),
 							rx: A2(_user$project$Main$rotateX, model.keys, model.rx),
 							ry: A2(_user$project$Main$rotateY, model.keys, model.ry)
@@ -12061,165 +12100,102 @@ var _user$project$Main$update = F2(
 					_1: _elm_lang$core$Platform_Cmd$none
 				};
 			case 'ChangeDirectionalX':
-				var parsed = function () {
-					var _p10 = _elm_lang$core$String$toFloat(_p8._0);
-					if (_p10.ctor === 'Ok') {
-						return _p10._0;
-					} else {
-						return _elm_community$elm_linear_algebra$Math_Vector3$getX(model.directional);
-					}
-				}();
+				var _p11 = A3(_user$project$Main$updateAndParseX, model.directional, model.directionalText, _p9._0);
+				var numeric = _p11._0;
+				var textual = _p11._1;
 				return {
 					ctor: '_Tuple2',
 					_0: _elm_lang$core$Native_Utils.update(
 						model,
-						{
-							directional: A2(_elm_community$elm_linear_algebra$Math_Vector3$setX, parsed, model.directional)
-						}),
+						{directional: numeric, directionalText: textual}),
 					_1: _elm_lang$core$Platform_Cmd$none
 				};
 			case 'ChangeDirectionalY':
-				var parsed = function () {
-					var _p11 = _elm_lang$core$String$toFloat(_p8._0);
-					if (_p11.ctor === 'Ok') {
-						return _p11._0;
-					} else {
-						return _elm_community$elm_linear_algebra$Math_Vector3$getY(model.directional);
-					}
-				}();
+				var _p12 = A3(_user$project$Main$updateAndParseY, model.directional, model.directionalText, _p9._0);
+				var numeric = _p12._0;
+				var textual = _p12._1;
 				return {
 					ctor: '_Tuple2',
 					_0: _elm_lang$core$Native_Utils.update(
 						model,
-						{
-							directional: A2(_elm_community$elm_linear_algebra$Math_Vector3$setY, parsed, model.directional)
-						}),
+						{directional: numeric, directionalText: textual}),
 					_1: _elm_lang$core$Platform_Cmd$none
 				};
 			case 'ChangeDirectionalZ':
-				var parsed = function () {
-					var _p12 = _elm_lang$core$String$toFloat(_p8._0);
-					if (_p12.ctor === 'Ok') {
-						return _p12._0;
-					} else {
-						return _elm_community$elm_linear_algebra$Math_Vector3$getZ(model.directional);
-					}
-				}();
+				var _p13 = A3(_user$project$Main$updateAndParseZ, model.directional, model.directionalText, _p9._0);
+				var numeric = _p13._0;
+				var textual = _p13._1;
 				return {
 					ctor: '_Tuple2',
 					_0: _elm_lang$core$Native_Utils.update(
 						model,
-						{
-							directional: A2(_elm_community$elm_linear_algebra$Math_Vector3$setZ, parsed, model.directional)
-						}),
+						{directional: numeric, directionalText: textual}),
 					_1: _elm_lang$core$Platform_Cmd$none
 				};
 			case 'ChangeDirectionalColourR':
-				var parsed = function () {
-					var _p13 = _elm_lang$core$String$toFloat(_p8._0);
-					if (_p13.ctor === 'Ok') {
-						return _p13._0;
-					} else {
-						return _elm_community$elm_linear_algebra$Math_Vector3$getX(model.directionalColour);
-					}
-				}();
+				var _p14 = A3(_user$project$Main$updateAndParseX, model.directionalColour, model.directionalColourText, _p9._0);
+				var numeric = _p14._0;
+				var textual = _p14._1;
 				return {
 					ctor: '_Tuple2',
 					_0: _elm_lang$core$Native_Utils.update(
 						model,
-						{
-							directionalColour: A2(_elm_community$elm_linear_algebra$Math_Vector3$setX, parsed, model.directionalColour)
-						}),
+						{directionalColour: numeric, directionalColourText: textual}),
 					_1: _elm_lang$core$Platform_Cmd$none
 				};
 			case 'ChangeDirectionalColourG':
-				var parsed = function () {
-					var _p14 = _elm_lang$core$String$toFloat(_p8._0);
-					if (_p14.ctor === 'Ok') {
-						return _p14._0;
-					} else {
-						return _elm_community$elm_linear_algebra$Math_Vector3$getY(model.directionalColour);
-					}
-				}();
+				var _p15 = A3(_user$project$Main$updateAndParseY, model.directionalColour, model.directionalColourText, _p9._0);
+				var numeric = _p15._0;
+				var textual = _p15._1;
 				return {
 					ctor: '_Tuple2',
 					_0: _elm_lang$core$Native_Utils.update(
 						model,
-						{
-							directionalColour: A2(_elm_community$elm_linear_algebra$Math_Vector3$setY, parsed, model.directionalColour)
-						}),
+						{directionalColour: numeric, directionalColourText: textual}),
 					_1: _elm_lang$core$Platform_Cmd$none
 				};
 			case 'ChangeDirectionalColourB':
-				var parsed = function () {
-					var _p15 = _elm_lang$core$String$toFloat(_p8._0);
-					if (_p15.ctor === 'Ok') {
-						return _p15._0;
-					} else {
-						return _elm_community$elm_linear_algebra$Math_Vector3$getZ(model.directionalColour);
-					}
-				}();
+				var _p16 = A3(_user$project$Main$updateAndParseZ, model.directionalColour, model.directionalColourText, _p9._0);
+				var numeric = _p16._0;
+				var textual = _p16._1;
 				return {
 					ctor: '_Tuple2',
 					_0: _elm_lang$core$Native_Utils.update(
 						model,
-						{
-							directionalColour: A2(_elm_community$elm_linear_algebra$Math_Vector3$setZ, parsed, model.directionalColour)
-						}),
+						{directionalColour: numeric, directionalColourText: textual}),
 					_1: _elm_lang$core$Platform_Cmd$none
 				};
 			case 'ChangeAmbientColourR':
-				var parsed = function () {
-					var _p16 = _elm_lang$core$String$toFloat(_p8._0);
-					if (_p16.ctor === 'Ok') {
-						return _p16._0;
-					} else {
-						return _elm_community$elm_linear_algebra$Math_Vector3$getX(model.ambientColour);
-					}
-				}();
+				var _p17 = A3(_user$project$Main$updateAndParseX, model.ambientColour, model.ambientColourText, _p9._0);
+				var numeric = _p17._0;
+				var textual = _p17._1;
 				return {
 					ctor: '_Tuple2',
 					_0: _elm_lang$core$Native_Utils.update(
 						model,
-						{
-							ambientColour: A2(_elm_community$elm_linear_algebra$Math_Vector3$setX, parsed, model.ambientColour)
-						}),
+						{ambientColour: numeric, ambientColourText: textual}),
 					_1: _elm_lang$core$Platform_Cmd$none
 				};
 			case 'ChangeAmbientColourG':
-				var parsed = function () {
-					var _p17 = _elm_lang$core$String$toFloat(_p8._0);
-					if (_p17.ctor === 'Ok') {
-						return _p17._0;
-					} else {
-						return _elm_community$elm_linear_algebra$Math_Vector3$getY(model.ambientColour);
-					}
-				}();
+				var _p18 = A3(_user$project$Main$updateAndParseY, model.ambientColour, model.ambientColourText, _p9._0);
+				var numeric = _p18._0;
+				var textual = _p18._1;
 				return {
 					ctor: '_Tuple2',
 					_0: _elm_lang$core$Native_Utils.update(
 						model,
-						{
-							ambientColour: A2(_elm_community$elm_linear_algebra$Math_Vector3$setY, parsed, model.ambientColour)
-						}),
+						{ambientColour: numeric, ambientColourText: textual}),
 					_1: _elm_lang$core$Platform_Cmd$none
 				};
 			default:
-				var parsed = function () {
-					var _p18 = _elm_lang$core$String$toFloat(_p8._0);
-					if (_p18.ctor === 'Ok') {
-						return _p18._0;
-					} else {
-						return _elm_community$elm_linear_algebra$Math_Vector3$getZ(model.ambientColour);
-					}
-				}();
+				var _p19 = A3(_user$project$Main$updateAndParseZ, model.ambientColour, model.ambientColourText, _p9._0);
+				var numeric = _p19._0;
+				var textual = _p19._1;
 				return {
 					ctor: '_Tuple2',
 					_0: _elm_lang$core$Native_Utils.update(
 						model,
-						{
-							ambientColour: A2(_elm_community$elm_linear_algebra$Math_Vector3$setZ, parsed, model.ambientColour)
-						}),
+						{ambientColour: numeric, ambientColourText: textual}),
 					_1: _elm_lang$core$Platform_Cmd$none
 				};
 		}
@@ -12242,7 +12218,13 @@ var _user$project$Main$Model = function (a) {
 								return function (i) {
 									return function (j) {
 										return function (k) {
-											return {texture: a, thetaX: b, thetaY: c, keys: d, position: e, rx: f, ry: g, lighting: h, directionalColour: i, ambientColour: j, directional: k};
+											return function (l) {
+												return function (m) {
+													return function (n) {
+														return {texture: a, thetaX: b, thetaY: c, keys: d, position: e, rx: f, ry: g, lighting: h, directionalColourText: i, directionalColour: j, ambientColourText: k, ambientColour: l, directionalText: m, directional: n};
+													};
+												};
+											};
 										};
 									};
 								};
@@ -12254,6 +12236,10 @@ var _user$project$Main$Model = function (a) {
 		};
 	};
 };
+var _user$project$Main$Triplet = F3(
+	function (a, b, c) {
+		return {x: a, y: b, z: c};
+	});
 var _user$project$Main$Keys = F6(
 	function (a, b, c, d, e, f) {
 		return {left: a, right: b, up: c, down: d, w: e, s: f};
@@ -12286,13 +12272,13 @@ var _user$project$Main$ChangeDirectionalColourR = function (a) {
 	return {ctor: 'ChangeDirectionalColourR', _0: a};
 };
 var _user$project$Main$UseLighting = {ctor: 'UseLighting'};
-var _user$project$Main$view = function (_p19) {
-	var _p20 = _p19;
-	var _p24 = _p20.lighting;
-	var _p23 = _p20.directionalColour;
-	var _p22 = _p20.directional;
-	var _p21 = _p20.ambientColour;
-	var entities = A9(_user$project$Main$renderEntity, _user$project$Main$cube, _p20.thetaX, _p20.thetaY, _p20.texture, _p20.position, _p24, _p23, _p22, _p21);
+var _user$project$Main$view = function (_p20) {
+	var _p21 = _p20;
+	var _p25 = _p21.lighting;
+	var _p24 = _p21.directionalText;
+	var _p23 = _p21.directionalColourText;
+	var _p22 = _p21.ambientColourText;
+	var entities = A9(_user$project$Main$renderEntity, _user$project$Main$cube, _p21.thetaX, _p21.thetaY, _p21.texture, _p21.position, _p25, _p21.directionalColour, _p21.directional, _p21.ambientColour);
 	return A2(
 		_elm_lang$html$Html$div,
 		_elm_lang$core$Native_List.fromArray(
@@ -12304,7 +12290,12 @@ var _user$project$Main$view = function (_p19) {
 				_elm_lang$core$Native_List.fromArray(
 					[
 						_elm_lang$html$Html_Attributes$width(400),
-						_elm_lang$html$Html_Attributes$height(400)
+						_elm_lang$html$Html_Attributes$height(400),
+						_elm_lang$html$Html_Attributes$style(
+						_elm_lang$core$Native_List.fromArray(
+							[
+								{ctor: '_Tuple2', _0: 'backgroundColor', _1: 'black'}
+							]))
 					]),
 				entities),
 				A2(
@@ -12314,7 +12305,6 @@ var _user$project$Main$view = function (_p19) {
 						_elm_lang$html$Html_Attributes$style(
 						_elm_lang$core$Native_List.fromArray(
 							[
-								{ctor: '_Tuple2', _0: 'position', _1: 'absolute'},
 								{ctor: '_Tuple2', _0: 'left', _1: '20px'},
 								{ctor: '_Tuple2', _0: 'right', _1: '20px'},
 								{ctor: '_Tuple2', _0: 'top', _1: '500px'}
@@ -12334,7 +12324,7 @@ var _user$project$Main$view = function (_p19) {
 									[
 										_elm_lang$html$Html_Attributes$type$('checkbox'),
 										_elm_lang$html$Html_Events$onClick(_user$project$Main$UseLighting),
-										_elm_lang$html$Html_Attributes$checked(_p24)
+										_elm_lang$html$Html_Attributes$checked(_p25)
 									]),
 								_elm_lang$core$Native_List.fromArray(
 									[])),
@@ -12369,9 +12359,7 @@ var _user$project$Main$view = function (_p19) {
 												_elm_lang$html$Html_Attributes$type$('text'),
 												_elm_lang$html$Html_Attributes$step('0.01'),
 												_elm_lang$html$Html_Events$onInput(_user$project$Main$ChangeDirectionalX),
-												_elm_lang$html$Html_Attributes$value(
-												_elm_lang$core$Basics$toString(
-													_elm_community$elm_linear_algebra$Math_Vector3$getX(_p22)))
+												_elm_lang$html$Html_Attributes$value(_p24.x)
 											]),
 										_elm_lang$core$Native_List.fromArray(
 											[])),
@@ -12383,9 +12371,7 @@ var _user$project$Main$view = function (_p19) {
 												_elm_lang$html$Html_Attributes$type$('text'),
 												_elm_lang$html$Html_Attributes$step('0.01'),
 												_elm_lang$html$Html_Events$onInput(_user$project$Main$ChangeDirectionalY),
-												_elm_lang$html$Html_Attributes$value(
-												_elm_lang$core$Basics$toString(
-													_elm_community$elm_linear_algebra$Math_Vector3$getY(_p22)))
+												_elm_lang$html$Html_Attributes$value(_p24.y)
 											]),
 										_elm_lang$core$Native_List.fromArray(
 											[])),
@@ -12397,9 +12383,7 @@ var _user$project$Main$view = function (_p19) {
 												_elm_lang$html$Html_Attributes$type$('text'),
 												_elm_lang$html$Html_Attributes$step('0.01'),
 												_elm_lang$html$Html_Events$onInput(_user$project$Main$ChangeDirectionalZ),
-												_elm_lang$html$Html_Attributes$value(
-												_elm_lang$core$Basics$toString(
-													_elm_community$elm_linear_algebra$Math_Vector3$getZ(_p22)))
+												_elm_lang$html$Html_Attributes$value(_p24.z)
 											]),
 										_elm_lang$core$Native_List.fromArray(
 											[]))
@@ -12419,9 +12403,7 @@ var _user$project$Main$view = function (_p19) {
 												_elm_lang$html$Html_Attributes$type$('text'),
 												_elm_lang$html$Html_Attributes$step('0.01'),
 												_elm_lang$html$Html_Events$onInput(_user$project$Main$ChangeDirectionalColourR),
-												_elm_lang$html$Html_Attributes$value(
-												_elm_lang$core$Basics$toString(
-													_elm_community$elm_linear_algebra$Math_Vector3$getX(_p23)))
+												_elm_lang$html$Html_Attributes$value(_p23.x)
 											]),
 										_elm_lang$core$Native_List.fromArray(
 											[])),
@@ -12433,9 +12415,7 @@ var _user$project$Main$view = function (_p19) {
 												_elm_lang$html$Html_Attributes$type$('text'),
 												_elm_lang$html$Html_Attributes$step('0.01'),
 												_elm_lang$html$Html_Events$onInput(_user$project$Main$ChangeDirectionalColourG),
-												_elm_lang$html$Html_Attributes$value(
-												_elm_lang$core$Basics$toString(
-													_elm_community$elm_linear_algebra$Math_Vector3$getY(_p23)))
+												_elm_lang$html$Html_Attributes$value(_p23.y)
 											]),
 										_elm_lang$core$Native_List.fromArray(
 											[])),
@@ -12447,9 +12427,7 @@ var _user$project$Main$view = function (_p19) {
 												_elm_lang$html$Html_Attributes$type$('text'),
 												_elm_lang$html$Html_Attributes$step('0.01'),
 												_elm_lang$html$Html_Events$onInput(_user$project$Main$ChangeDirectionalColourB),
-												_elm_lang$html$Html_Attributes$value(
-												_elm_lang$core$Basics$toString(
-													_elm_community$elm_linear_algebra$Math_Vector3$getZ(_p23)))
+												_elm_lang$html$Html_Attributes$value(_p23.z)
 											]),
 										_elm_lang$core$Native_List.fromArray(
 											[]))
@@ -12477,9 +12455,7 @@ var _user$project$Main$view = function (_p19) {
 												_elm_lang$html$Html_Attributes$type$('text'),
 												_elm_lang$html$Html_Attributes$step('0.01'),
 												_elm_lang$html$Html_Events$onInput(_user$project$Main$ChangeAmbientColourR),
-												_elm_lang$html$Html_Attributes$value(
-												_elm_lang$core$Basics$toString(
-													_elm_community$elm_linear_algebra$Math_Vector3$getX(_p21)))
+												_elm_lang$html$Html_Attributes$value(_p22.x)
 											]),
 										_elm_lang$core$Native_List.fromArray(
 											[])),
@@ -12491,9 +12467,7 @@ var _user$project$Main$view = function (_p19) {
 												_elm_lang$html$Html_Attributes$type$('text'),
 												_elm_lang$html$Html_Attributes$step('0.01'),
 												_elm_lang$html$Html_Events$onInput(_user$project$Main$ChangeAmbientColourG),
-												_elm_lang$html$Html_Attributes$value(
-												_elm_lang$core$Basics$toString(
-													_elm_community$elm_linear_algebra$Math_Vector3$getY(_p21)))
+												_elm_lang$html$Html_Attributes$value(_p22.y)
 											]),
 										_elm_lang$core$Native_List.fromArray(
 											[])),
@@ -12505,9 +12479,7 @@ var _user$project$Main$view = function (_p19) {
 												_elm_lang$html$Html_Attributes$type$('text'),
 												_elm_lang$html$Html_Attributes$step('0.01'),
 												_elm_lang$html$Html_Events$onInput(_user$project$Main$ChangeAmbientColourB),
-												_elm_lang$html$Html_Attributes$value(
-												_elm_lang$core$Basics$toString(
-													_elm_community$elm_linear_algebra$Math_Vector3$getZ(_p21)))
+												_elm_lang$html$Html_Attributes$value(_p22.z)
 											]),
 										_elm_lang$core$Native_List.fromArray(
 											[]))
@@ -12527,8 +12499,8 @@ var _user$project$Main$keyChange = F2(
 	function (on, keyCode) {
 		return _user$project$Main$KeyChange(
 			function () {
-				var _p25 = keyCode;
-				switch (_p25) {
+				var _p26 = keyCode;
+				switch (_p26) {
 					case 37:
 						return function (k) {
 							return _elm_lang$core$Native_Utils.update(
@@ -12570,7 +12542,7 @@ var _user$project$Main$keyChange = F2(
 				}
 			}());
 	});
-var _user$project$Main$subscriptions = function (_p26) {
+var _user$project$Main$subscriptions = function (_p27) {
 	return _elm_lang$core$Platform_Sub$batch(
 		_elm_lang$core$Native_List.fromArray(
 			[
@@ -12601,8 +12573,11 @@ var _user$project$Main$init = {
 		keys: A6(_user$project$Main$Keys, false, false, false, false, false, false),
 		position: A3(_elm_community$elm_linear_algebra$Math_Vector3$vec3, 0, 0, -4),
 		lighting: true,
+		directionalColourText: {x: '0.8', y: '0.2', z: '0.2'},
 		directionalColour: A3(_elm_community$elm_linear_algebra$Math_Vector3$vec3, 0.8, 0.2, 0.2),
-		ambientColour: A3(_elm_community$elm_linear_algebra$Math_Vector3$vec3, 1.0, 0.2, 0.8),
+		ambientColourText: {x: '0.2', y: '0.2', z: '0.9'},
+		ambientColour: A3(_elm_community$elm_linear_algebra$Math_Vector3$vec3, 0.2, 0.2, 0.8),
+		directionalText: {x: '-0.25', y: '0.25', z: '-1'},
 		directional: A3(_elm_community$elm_linear_algebra$Math_Vector3$vec3, -0.25, -0.25, -1)
 	},
 	_1: A3(_elm_lang$core$Task$perform, _user$project$Main$TexturesError, _user$project$Main$TexturesLoaded, _user$project$Main$fetchTextures)

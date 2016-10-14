@@ -4966,6 +4966,10 @@ var _elm_community$elm_webgl$Native_WebGL = function () {
             gl.bindTexture(gl.TEXTURE_2D, tex);
             gl.uniform1i(uniformLocation, currentTexture);
           };
+        case gl.BOOL:
+          return function (value) {
+            gl.uniform1i(uniformLocation, value);
+          };
         default:
           LOG('Unsupported uniform type: ' + uniform.type);
           return function () {};
@@ -11198,7 +11202,12 @@ var _user$project$Main$main = {
 		_elm_lang$core$Native_List.fromArray(
 			[
 				_elm_lang$html$Html_Attributes$width(400),
-				_elm_lang$html$Html_Attributes$height(400)
+				_elm_lang$html$Html_Attributes$height(400),
+				_elm_lang$html$Html_Attributes$style(
+				_elm_lang$core$Native_List.fromArray(
+					[
+						{ctor: '_Tuple2', _0: 'backgroundColor', _1: 'black'}
+					]))
 			]),
 		A2(
 			_elm_lang$core$Basics_ops['++'],
@@ -11210,7 +11219,7 @@ var _user$project$Main$main = {
 					_user$project$Main$fragmentShader,
 					_user$project$Main$triangle,
 					{
-						displacement: A3(_elm_community$elm_linear_algebra$Math_Vector3$vec3, -1, 0, 0)
+						displacement: A3(_elm_community$elm_linear_algebra$Math_Vector3$vec3, -1.5, 0, 0)
 					})
 				]),
 			_elm_lang$core$Native_List.fromArray(
@@ -11221,7 +11230,7 @@ var _user$project$Main$main = {
 					_user$project$Main$fragmentShader,
 					_user$project$Main$square,
 					{
-						displacement: A3(_elm_community$elm_linear_algebra$Math_Vector3$vec3, 2, 0, 0)
+						displacement: A3(_elm_community$elm_linear_algebra$Math_Vector3$vec3, 1.5, 0, 0)
 					})
 				])))
 };

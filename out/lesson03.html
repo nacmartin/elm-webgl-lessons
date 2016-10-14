@@ -4966,6 +4966,10 @@ var _elm_community$elm_webgl$Native_WebGL = function () {
             gl.bindTexture(gl.TEXTURE_2D, tex);
             gl.uniform1i(uniformLocation, currentTexture);
           };
+        case gl.BOOL:
+          return function (value) {
+            gl.uniform1i(uniformLocation, value);
+          };
         default:
           LOG('Unsupported uniform type: ' + uniform.type);
           return function () {};
@@ -11133,7 +11137,7 @@ var _elm_lang$html$Html_Attributes$classList = function (list) {
 				A2(_elm_lang$core$List$filter, _elm_lang$core$Basics$snd, list))));
 };
 var _elm_lang$html$Html_Attributes$style = _elm_lang$virtual_dom$VirtualDom$style;
-var _user$project$Main$fragmentShader = {'src': '\n  precision mediump float;\n  varying vec3 vcolor;\n\n  void main () {\n      gl_FragColor = vec4(vcolor, 1.0);\n  }\n\n'};
+var _user$project$Main$fragmentShader = {'src': '\n  precision mediump float;\n  varying vec3 vcolor;\n\n  void main () {\n      gl_FragColor = vec4(vcolor, 1.0);\n  }\n'};
 var _user$project$Main$vertexShader = {'src': '\n\n  precision mediump float;\n  attribute vec3 position;\n  attribute vec3 color;\n  uniform vec3 displacement;\n  uniform mat4 perspective;\n  varying vec3 vcolor;\n\n  void main() {\n    gl_Position = perspective * vec4(0.5 * position, 1) + vec4(displacement, 1);\n    vcolor = color;\n  }\n'};
 var _user$project$Main$perspectiveSquare = function (t) {
 	return A2(
@@ -11226,7 +11230,12 @@ var _user$project$Main$view = function (t) {
 		_elm_lang$core$Native_List.fromArray(
 			[
 				_elm_lang$html$Html_Attributes$width(400),
-				_elm_lang$html$Html_Attributes$height(400)
+				_elm_lang$html$Html_Attributes$height(400),
+				_elm_lang$html$Html_Attributes$style(
+				_elm_lang$core$Native_List.fromArray(
+					[
+						{ctor: '_Tuple2', _0: 'backgroundColor', _1: 'black'}
+					]))
 			]),
 		A2(
 			_elm_lang$core$Basics_ops['++'],
@@ -11238,7 +11247,7 @@ var _user$project$Main$view = function (t) {
 					_user$project$Main$fragmentShader,
 					_user$project$Main$triangle,
 					{
-						displacement: A3(_elm_community$elm_linear_algebra$Math_Vector3$vec3, -1, 0, 0),
+						displacement: A3(_elm_community$elm_linear_algebra$Math_Vector3$vec3, -1.5, 0, 0),
 						perspective: _user$project$Main$perspectiveTriangle(t / 1000)
 					})
 				]),
@@ -11250,7 +11259,7 @@ var _user$project$Main$view = function (t) {
 					_user$project$Main$fragmentShader,
 					_user$project$Main$square,
 					{
-						displacement: A3(_elm_community$elm_linear_algebra$Math_Vector3$vec3, 2, 0, 0),
+						displacement: A3(_elm_community$elm_linear_algebra$Math_Vector3$vec3, 1.5, 0, 0),
 						perspective: _user$project$Main$perspectiveSquare(t / 1000)
 					})
 				])));

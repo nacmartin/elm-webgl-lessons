@@ -4966,6 +4966,10 @@ var _elm_community$elm_webgl$Native_WebGL = function () {
             gl.bindTexture(gl.TEXTURE_2D, tex);
             gl.uniform1i(uniformLocation, currentTexture);
           };
+        case gl.BOOL:
+          return function (value) {
+            gl.uniform1i(uniformLocation, value);
+          };
         default:
           LOG('Unsupported uniform type: ' + uniform.type);
           return function () {};
@@ -11133,7 +11137,7 @@ var _elm_lang$html$Html_Attributes$classList = function (list) {
 				A2(_elm_lang$core$List$filter, _elm_lang$core$Basics$snd, list))));
 };
 var _elm_lang$html$Html_Attributes$style = _elm_lang$virtual_dom$VirtualDom$style;
-var _user$project$Main$fragmentShader = {'src': '\n  precision mediump float;\n\n  void main () {\n      gl_FragColor = vec4(0, 0, 0, 1);\n  }\n\n'};
+var _user$project$Main$fragmentShader = {'src': '\n  precision mediump float;\n\n  void main () {\n      gl_FragColor = vec4(1, 1, 1, 1);\n  }\n\n'};
 var _user$project$Main$vertexShader = {'src': '\n  precision mediump float;\n  attribute vec3 position;\n  uniform vec3 displacement;\n\n  void main() {\n    gl_Position = vec4(0.3 * (position + displacement), 1);\n  }\n'};
 var _user$project$Main$square = _elm_community$elm_webgl$WebGL$Triangle(
 	_elm_lang$core$Native_List.fromArray(
@@ -11185,7 +11189,12 @@ var _user$project$Main$main = {
 		_elm_lang$core$Native_List.fromArray(
 			[
 				_elm_lang$html$Html_Attributes$width(400),
-				_elm_lang$html$Html_Attributes$height(400)
+				_elm_lang$html$Html_Attributes$height(400),
+				_elm_lang$html$Html_Attributes$style(
+				_elm_lang$core$Native_List.fromArray(
+					[
+						{ctor: '_Tuple2', _0: 'backgroundColor', _1: 'black'}
+					]))
 			]),
 		A2(
 			_elm_lang$core$Basics_ops['++'],
@@ -11197,7 +11206,7 @@ var _user$project$Main$main = {
 					_user$project$Main$fragmentShader,
 					_user$project$Main$triangle,
 					{
-						displacement: A3(_elm_community$elm_linear_algebra$Math_Vector3$vec3, -1, 0, 0)
+						displacement: A3(_elm_community$elm_linear_algebra$Math_Vector3$vec3, -1.5, 0, 0)
 					})
 				]),
 			_elm_lang$core$Native_List.fromArray(
@@ -11208,7 +11217,7 @@ var _user$project$Main$main = {
 					_user$project$Main$fragmentShader,
 					_user$project$Main$square,
 					{
-						displacement: A3(_elm_community$elm_linear_algebra$Math_Vector3$vec3, 2, 0, 0)
+						displacement: A3(_elm_community$elm_linear_algebra$Math_Vector3$vec3, 1.5, 0, 0)
 					})
 				])))
 };
