@@ -305,12 +305,11 @@ view {texture, thetaX, thetaY, position, rx, ry, lighting, alpha, blending, dire
     div
       []
       [ WebGL.toHtml
-        [ width 400, height 400 ]
+        [ width 400, height 400, style [("backgroundColor", "black")]  ]
         entities
       , div
         [ style
-          [ ("position", "absolute")
-          , ("left", "20px")
+          [ ("left", "20px")
           , ("right", "20px")
           , ("top", "500px")
           ]

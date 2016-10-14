@@ -7,7 +7,7 @@ import WebGL exposing (..)
 import Html exposing (Html)
 import Html.App as Html
 import AnimationFrame
-import Html.Attributes exposing (width, height)
+import Html.Attributes exposing (width, height, style)
 
 type alias Model =
   { texture : Maybe Texture
@@ -87,7 +87,7 @@ view {texture, theta} =
     Just tex ->
         [render vertexShader fragmentShader cube (uniformsCube theta tex)]
   )
-  |> WebGL.toHtml [ width 400, height 400 ]
+  |> WebGL.toHtml [ width 400, height 400, style [("backgroundColor", "black")]  ]
 
 uniformsCube : Float -> Texture -> { texture: Texture, rotation:Mat4, perspective:Mat4, camera:Mat4, displacement:Vec3 }
 uniformsCube t texture =

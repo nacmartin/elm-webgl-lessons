@@ -4,7 +4,7 @@ import Math.Matrix4 exposing (..)
 import WebGL exposing (..)
 import Html exposing (Html)
 import Html.App as Html
-import Html.Attributes exposing (width, height)
+import Html.Attributes exposing (width, height, style)
 import AnimationFrame
 
 -- Create a mesh with a pyramid and a square
@@ -84,7 +84,7 @@ main =
 view : Float -> Html msg
 view t =
   WebGL.toHtml
-    [ width 400, height 400 ]
+    [ width 400, height 400, style [("backgroundColor", "black")] ]
     ( [render vertexShader fragmentShader pyramid (uniformsPyramid t)]
        ++ [render vertexShader fragmentShader cube (uniformsCube t)]
     )

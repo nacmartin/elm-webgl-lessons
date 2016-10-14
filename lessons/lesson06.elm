@@ -198,7 +198,7 @@ view {textures, thetaX, thetaY, textureSelected, position, rx, ry} =
     div
       []
       [ WebGL.toHtml
-          [ width 400, height 400 ]
+          [ width 400, height 400, style [("backgroundColor", "black")]  ]
           entities
       , div
           [ style

@@ -3,7 +3,7 @@ import Math.Matrix4 exposing (..)
 import WebGL exposing (..)
 import Html exposing (Html)
 import Html.App as Html
-import Html.Attributes exposing (width, height)
+import Html.Attributes exposing (width, height, style)
 import AnimationFrame
 
 -- Create a mesh with a triangle and a square
@@ -35,9 +35,9 @@ square =
 main : Html msg
 main =
   WebGL.toHtml
-    [ width 400, height 400 ]
-    ( [render vertexShader fragmentShader triangle { displacement = vec3 -1 0 0}] ++
-      [render vertexShader fragmentShader square { displacement = vec3 2 0 0}]
+    [ width 400, height 400, style [("backgroundColor", "black")] ]
+    ( [render vertexShader fragmentShader triangle { displacement = vec3 -1.5 0 0}] ++
+      [render vertexShader fragmentShader square { displacement = vec3 1.5 0 0}]
     )
 
 -- Shaders
