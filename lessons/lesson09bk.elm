@@ -13,19 +13,14 @@ import Html.Attributes exposing (width, height, style)
 
 type alias Model =
   { texture : Maybe Texture
-  , stars: List Star
+  , thetaX : Float
+  , thetaY : Float
   , keys : Keys
   , position: Vec3
   , rx: Float
   , ry: Float
   }
 
-type alias Star =
-  { dist: Float
-  , color: Vec3
-  , rotationSpeed: Float
-  , angle: Float
-  }
 
 type Action
   = TexturesError Error
@@ -45,26 +40,15 @@ type alias Keys =
 init : (Model, Cmd Action)
 init =
   ( {texture = Nothing
+  , thetaX = 0
+  , thetaY = 0
   , rx = 0
   , ry = 0
-  , position = vec3 0 0 4
-  , stars = (initStars 1)
   , keys = Keys False False False False False False
+  , position = (vec3 0 0 -4)
   }
   , fetchTexture |> Task.perform TexturesError TexturesLoaded
   )
-
-initStars : Int -> List Star
-initStars num =
-  List.map (initStar num) (List.repeat num 1)
-
-initStar : Int -> Int -> Star
-initStar total index =
-  { angle = 0.0
-  , dist = 5.0 * toFloat(index) / toFloat(total)
-  , rotationSpeed = toFloat(index) / toFloat(total)
-  , color = vec3 1 0.5 0.5
-  }
 
 fetchTexture : Task Error (Maybe Texture)
 fetchTexture =
@@ -82,7 +66,9 @@ update action model =
       ({model | keys = keyfunc model.keys}, Cmd.none)
     Animate dt ->
       ( { model
-        | position = model.position
+        | thetaX = model.thetaX + model.rx * dt / 1000
+        , thetaY = model.thetaY + model.ry * dt / 1000
+        , position = model.position
             |> move model.keys
         , rx = model.rx
             |> rotateX model.keys
@@ -157,25 +143,41 @@ keyChange on keyCode =
 
 -- MESHES
 
-starMesh : Drawable { position:Vec3, coord:Vec3 }
-starMesh =
-  Triangle
-    [ ( { position = vec3 -1 1 0, coord = vec3 0 1 0 }
-      , { position = vec3 1 1 0, coord = vec3 1 1 0 }
-      , { position = vec3 -1 -1 0, coord = vec3 0 0 0 }
-      ),
-      ( { position = vec3 -1 -1 0, coord = vec3 0 0 0 }
-      , { position = vec3 1 1 0, coord = vec3 1 1 0 }
-      , { position = vec3 1 -1 0, coord = vec3 1 0 0 }
-      )
+cube : Drawable { position:Vec3, coord:Vec3 }
+cube =
+  Triangle <|
+  List.concatMap rotatedFace [ (0,0), (90,0), (180,0), (270,0), (0,90), (0,-90) ]
+
+
+rotatedFace : (Float,Float) -> List ({ position:Vec3, coord:Vec3 }, { position:Vec3, coord:Vec3 }, { position:Vec3, coord:Vec3 })
+rotatedFace (angleX,angleY) =
+  let
+    x = makeRotate (degrees angleX) (vec3 1 0 0)
+    y = makeRotate (degrees angleY) (vec3 0 1 0)
+    t = x `mul` y `mul` makeTranslate (vec3 0 0 1)
+    each f (a,b,c) =
+      (f a, f b, f c)
+  in
+    List.map (each (\x -> {x | position = transform t x.position })) face
+
+face : List ({ position:Vec3, coord:Vec3 }, { position:Vec3, coord:Vec3 }, { position:Vec3, coord:Vec3 })
+face =
+  let
+    topLeft     = { position = vec3 -1  1 0, coord = vec3 0 1 0 }
+    topRight    = { position = vec3  1  1 0, coord = vec3 1 1 0 }
+    bottomLeft  = { position = vec3 -1 -1 0, coord = vec3 0 0 0 }
+    bottomRight = { position = vec3  1 -1 0, coord = vec3 1 0 0 }
+  in
+    [ (topLeft,topRight,bottomLeft)
+    , (bottomLeft,topRight,bottomRight)
     ]
 
 -- VIEW
 
 view : Model -> Html Action
-view {texture, position, rx, ry, stars} =
+view {texture, thetaX, thetaY, position, rx, ry} =
   let
-    entities = List.concat (List.map (renderStar rx ry texture position) stars)
+    entities = renderEntity cube thetaX thetaY texture position
   in
     div
       []
@@ -195,50 +197,49 @@ view {texture, position, rx, ry, stars} =
           [ text message]
       ]
 
-renderStar : Float -> Float -> Maybe Texture -> Vec3 -> Star -> List Renderable
-renderStar rx ry texture position star =
-  renderEntity starMesh rx ry texture position star
-
 message : String
 message =
     "Keys are: F -> change texture mode, Right/Left/Up/Down rotate, w/s -> move camera in/out"
 
 
-renderEntity : Drawable { position:Vec3, coord:Vec3 } -> Float -> Float -> Maybe Texture -> Vec3 -> Star -> List Renderable
-renderEntity mesh rx ry texture position star =
+renderEntity : Drawable { position:Vec3, coord:Vec3 } -> Float -> Float -> Maybe Texture -> Vec3 -> List Renderable
+renderEntity mesh thetaX thetaY texture position =
   case texture of
     Nothing ->
      []
-    Just tex ->
-     [render vertexShader fragmentShader mesh (uniformsStar rx rx tex star)]
 
-uniformsStar : Float -> Float -> Texture -> Star -> { texture:Texture, perspective:Mat4, camera:Mat4, worldSpace: Mat4, displacement: Vec3 }
-uniformsStar rx ry texture { dist, rotationSpeed, color, angle } =
-    let --a = Debug.log "a" (makeRotate ry (vec3 1 0 0) `mul`  makeRotate rx (vec3 0 1 0) `mul`  makeRotate angle (vec3 0 0 1) `mul` makeTranslate (vec3 dist 0 0))
-        c = Debug.log "camera" (makeLookAt (vec3 0 0 -4) (vec3 0 0 -3) (vec3 0 1 0))
+    Just tex ->
+     [render vertexShader fragmentShader mesh (uniformsCube thetaX thetaY tex position)]
+
+uniformsCube : Float -> Float -> Texture -> Vec3 -> { texture:Texture, rotation:Mat4, perspective:Mat4, camera:Mat4, displacement: Vec3 }
+uniformsCube tx ty texture displacement =
+    let --a = Debug.log "a" (makeRotate ty (vec3 1 0 0) `mul`  makeRotate tx (vec3 0 1 0) `mul`  makeRotate 0 (vec3 0 0 1))
+        c = Debug.log "camera" (makeLookAt displacement (displacement `add` k) (vec3 0 1 0))
+        d = Debug.log "displacement" displacement
     in
-  { texture = texture
-  , worldSpace = makeRotate ry (vec3 1 0 0) `mul`  makeRotate rx (vec3 0 1 0) `mul`  makeRotate angle (vec3 0 0 1) `mul` makeTranslate (vec3 0 0 4)
-  , camera = makeLookAt (vec3 0 0 -4) (vec3 0 0 -3) (vec3 0 1 0)
-  , perspective = makePerspective 45 1 0.01 100
-  , displacement = (vec3 0 0 -4)
-  }
+        { texture = texture
+        , rotation = makeRotate ty (vec3 1 0 0) `mul`  makeRotate tx (vec3 0 1 0) `mul`  makeRotate 0 (vec3 0 0 1)
+        , perspective = makePerspective 45 1 0.01 100
+        , camera = makeLookAt displacement (displacement `add` k) (vec3 0 1 0)
+        , displacement = (vec3 0 0 0)
+        }
 
 -- SHADERS
 
-vertexShader : Shader { attr| position:Vec3, coord:Vec3 } { unif | worldSpace:Mat4, perspective:Mat4, camera:Mat4} { vcoord:Vec2 }
+vertexShader : Shader { attr| position:Vec3, coord:Vec3 } { unif | rotation:Mat4, displacement:Vec3, perspective:Mat4, camera:Mat4 } { vcoord:Vec2 }
 vertexShader = [glsl|
 
   precision mediump float;
   attribute vec3 position;
   attribute vec3 coord;
-  uniform mat4 worldSpace;
+  uniform mat4 rotation;
+  uniform vec3 displacement;
   uniform mat4 perspective;
   uniform mat4 camera;
   varying vec2 vcoord;
 
   void main() {
-    gl_Position = perspective * camera * worldSpace * vec4(position, 1.0);
+    gl_Position = perspective * camera * rotation * vec4(position, 1.0) + vec4(displacement, 1);
     vcoord = coord.xy;
   }
 |]
