@@ -47,8 +47,8 @@ init =
   ( {texture = Nothing
   , rx = 0
   , ry = 0
-  , position = vec3 0 0 4
-  , stars = (initStars 1)
+  , position = vec3 0 0 40
+  , stars = (initStars 50)
   , keys = Keys False False False False False False
   }
   , fetchTexture |> Task.perform TexturesError TexturesLoaded
@@ -56,12 +56,12 @@ init =
 
 initStars : Int -> List Star
 initStars num =
-  List.map (initStar num) (List.repeat num 1)
+  List.map (initStar num) [1..50]
 
 initStar : Int -> Int -> Star
 initStar total index =
   { angle = 0.0
-  , dist = 5.0 * toFloat(index) / toFloat(total)
+  , dist = 10.0 * toFloat(index) / toFloat(total)
   , rotationSpeed = toFloat(index) / toFloat(total)
   , color = vec3 1 0.5 0.5
   }
@@ -210,18 +210,15 @@ renderEntity mesh rx ry texture position star =
     Nothing ->
      []
     Just tex ->
-     [render vertexShader fragmentShader mesh (uniformsStar rx rx tex star)]
+     [renderWithConfig [Enable Blend, Disable DepthTest, BlendFunc (SrcAlpha, One)] vertexShader fragmentShader mesh (uniformsStar rx rx tex position star)]
 
-uniformsStar : Float -> Float -> Texture -> Star -> { texture:Texture, perspective:Mat4, camera:Mat4, worldSpace: Mat4, displacement: Vec3 }
-uniformsStar rx ry texture { dist, rotationSpeed, color, angle } =
-    let --a = Debug.log "a" (makeRotate ry (vec3 1 0 0) `mul`  makeRotate rx (vec3 0 1 0) `mul`  makeRotate angle (vec3 0 0 1) `mul` makeTranslate (vec3 dist 0 0))
-        c = Debug.log "camera" (makeLookAt (vec3 0 0 -4) (vec3 0 0 -3) (vec3 0 1 0))
-    in
+uniformsStar : Float -> Float -> Texture -> Vec3 -> Star -> { texture:Texture, perspective:Mat4, camera:Mat4, worldSpace: Mat4, color: Vec3 }
+uniformsStar rx ry texture position { dist, rotationSpeed, color, angle } =
   { texture = texture
-  , worldSpace = makeRotate ry (vec3 1 0 0) `mul`  makeRotate rx (vec3 0 1 0) `mul`  makeRotate angle (vec3 0 0 1) `mul` makeTranslate (vec3 0 0 4)
-  , camera = makeLookAt (vec3 0 0 -4) (vec3 0 0 -3) (vec3 0 1 0)
+  , worldSpace = makeRotate ry (vec3 1 0 0) `mul`  makeRotate rx (vec3 0 1 0) `mul`  makeRotate angle (vec3 0 0 1) `mul` makeTranslate (vec3 dist 0 0) `mul` makeTranslate position
+  , camera = makeLookAt (vec3 0 0 -4) (vec3 0 0 -1) (vec3 0 1 0)
   , perspective = makePerspective 45 1 0.01 100
-  , displacement = (vec3 0 0 -4)
+  , color = color
   }
 
 -- SHADERS
@@ -243,14 +240,15 @@ vertexShader = [glsl|
   }
 |]
 
-fragmentShader : Shader {} { unif | texture:Texture } { vcoord:Vec2 }
+fragmentShader : Shader {} { unif | texture:Texture, color:Vec3 } { vcoord:Vec2 }
 fragmentShader = [glsl|
   precision mediump float;
   uniform sampler2D texture;
+  uniform vec3 color;
   varying vec2 vcoord;
 
   void main () {
-      gl_FragColor = texture2D(texture, vcoord);
+      gl_FragColor = texture2D(texture, vcoord) * vec4(color, 1.0);
   }
 
 |]
