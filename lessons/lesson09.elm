@@ -9,14 +9,17 @@ import WebGL exposing (..)
 import Html exposing (Html, text, div)
 import Html.App as Html
 import AnimationFrame
+import Random
+import Array
 import Html.Attributes exposing (width, height, style)
+
+effectiveFPMS = 30.0 / 10000.0
 
 type alias Model =
   { texture : Maybe Texture
   , stars: List Star
   , keys : Keys
   , position: Vec3
-  , rx: Float
   , ry: Float
   }
 
@@ -32,6 +35,10 @@ type Action
   | TexturesLoaded (Maybe Texture)
   | KeyChange (Keys -> Keys)
   | Animate Time
+  | RandomColorGenerated RandomColor
+
+type alias RandomColor =
+  { idx : Int, component: Int, value: Float }
 
 type alias Keys =
   { left : Bool
@@ -45,26 +52,36 @@ type alias Keys =
 init : (Model, Cmd Action)
 init =
   ( {texture = Nothing
-  , rx = 0
   , ry = 0
-  , position = vec3 0 0 40
+  , position = vec3 0 0 10
   , stars = (initStars 50)
   , keys = Keys False False False False False False
   }
-  , fetchTexture |> Task.perform TexturesError TexturesLoaded
+  , Cmd.batch[ fetchTexture |> Task.perform TexturesError TexturesLoaded, randomColors 50]
   )
 
 initStars : Int -> List Star
 initStars num =
-  List.map (initStar num) [1..50]
+  List.map (initStar num) [1..num]
 
 initStar : Int -> Int -> Star
 initStar total index =
   { angle = 0.0
-  , dist = 10.0 * toFloat(index) / toFloat(total)
+  , dist = 5.0 * toFloat(index) / toFloat(total)
   , rotationSpeed = toFloat(index) / toFloat(total)
-  , color = vec3 1 0.5 0.5
+  , color = vec3 1.0 1.0 1.0
   }
+
+generator = Random.float 0 1
+
+randomColors : Int -> Cmd Action
+randomColors total =
+    Cmd.batch (List.concat (List.map (\c -> (List.map (\idx -> randomColor idx c) [0..total])) [0..2]))
+
+randomColor : Int -> Int -> Cmd Action
+randomColor starIdx component =
+  (Random.generate (\res -> RandomColorGenerated {idx= starIdx, component= component, value= res }) generator)
+
 
 fetchTexture : Task Error (Maybe Texture)
 fetchTexture =
@@ -84,24 +101,57 @@ update action model =
       ( { model
         | position = model.position
             |> move model.keys
-        , rx = model.rx
-            |> rotateX model.keys
         , ry = model.ry
             |> rotateY model.keys
+        , stars = List.map (updateStar dt) model.stars
         }
         , Cmd.none
       )
+    RandomColorGenerated randomColor ->
+      ({model| stars = (replaceColorStars randomColor model.stars) }, Cmd.none)
 
-rotateX : {keys| right: Bool, left: Bool} -> Float -> Float
-rotateX k velocity =
+replaceColorStars : RandomColor -> List Star -> List Star
+replaceColorStars {idx, component, value} stars =
   let
-    direction =
-      case (k.right, k.left) of
-        (True, False) -> 0.1
-        (False, True) -> -0.1
-        _ -> 0
+    newStar = get idx stars
   in
-     velocity + direction
+    case newStar of
+      Nothing -> stars
+      Just someStar ->
+        updateStarInList stars idx (replaceColor component value someStar)
+
+get n xs = List.head (List.drop n xs)
+
+replaceColor : Int -> Float -> Star -> Star
+replaceColor component value star =
+  case component of
+      0 -> {star| color = (setX value star.color)}
+      1 -> {star| color = (setY value star.color)}
+      2 -> {star| color = (setZ value star.color)}
+      _ -> star
+
+updateStarInList : List Star -> Int -> Star -> List Star
+updateStarInList list indexToUpdate star =
+  let
+    update index prevStar =
+      if index == indexToUpdate then
+        star
+      else
+        prevStar
+  in
+    List.indexedMap update list
+
+
+
+updateStar : Float -> Star -> Star
+updateStar dt star =
+  { star
+  | angle = star.angle + star.rotationSpeed * dt * effectiveFPMS
+  , dist = if star.dist < 0.0 then
+             star.dist + 5.0
+           else
+             star.dist - 0.1 * dt * effectiveFPMS
+  }
 
 rotateY : {keys| up: Bool, down: Bool} -> Float -> Float
 rotateY k velocity =
@@ -173,9 +223,9 @@ starMesh =
 -- VIEW
 
 view : Model -> Html Action
-view {texture, position, rx, ry, stars} =
+view {texture, position, ry, stars} =
   let
-    entities = List.concat (List.map (renderStar rx ry texture position) stars)
+    entities = List.concat (List.map (renderStar ry texture position) stars)
   in
     div
       []
@@ -195,27 +245,27 @@ view {texture, position, rx, ry, stars} =
           [ text message]
       ]
 
-renderStar : Float -> Float -> Maybe Texture -> Vec3 -> Star -> List Renderable
-renderStar rx ry texture position star =
-  renderEntity starMesh rx ry texture position star
+renderStar : Float -> Maybe Texture -> Vec3 -> Star -> List Renderable
+renderStar ry texture position star =
+  renderEntity starMesh ry texture position star
 
 message : String
 message =
     "Keys are: F -> change texture mode, Right/Left/Up/Down rotate, w/s -> move camera in/out"
 
 
-renderEntity : Drawable { position:Vec3, coord:Vec3 } -> Float -> Float -> Maybe Texture -> Vec3 -> Star -> List Renderable
-renderEntity mesh rx ry texture position star =
+renderEntity : Drawable { position:Vec3, coord:Vec3 } -> Float -> Maybe Texture -> Vec3 -> Star -> List Renderable
+renderEntity mesh ry texture position star =
   case texture of
     Nothing ->
      []
     Just tex ->
-     [renderWithConfig [Enable Blend, Disable DepthTest, BlendFunc (SrcAlpha, One)] vertexShader fragmentShader mesh (uniformsStar rx rx tex position star)]
+     [renderWithConfig [Enable Blend, Disable DepthTest, BlendFunc (SrcAlpha, One)] vertexShader fragmentShader mesh (uniformsStar ry tex position star)]
 
-uniformsStar : Float -> Float -> Texture -> Vec3 -> Star -> { texture:Texture, perspective:Mat4, camera:Mat4, worldSpace: Mat4, color: Vec3 }
-uniformsStar rx ry texture position { dist, rotationSpeed, color, angle } =
+uniformsStar : Float -> Texture -> Vec3 -> Star -> { texture:Texture, perspective:Mat4, camera:Mat4, worldSpace: Mat4, color: Vec3 }
+uniformsStar ry texture position { dist, rotationSpeed, color, angle } =
   { texture = texture
-  , worldSpace = makeRotate ry (vec3 1 0 0) `mul`  makeRotate rx (vec3 0 1 0) `mul`  makeRotate angle (vec3 0 0 1) `mul` makeTranslate (vec3 dist 0 0) `mul` makeTranslate position
+  , worldSpace = makeTranslate position `mul` makeRotate ry (vec3 1 0 0) `mul`  makeRotate angle (vec3 0 0 1) `mul` makeTranslate (vec3 dist 0 0)
   , camera = makeLookAt (vec3 0 0 -4) (vec3 0 0 -1) (vec3 0 1 0)
   , perspective = makePerspective 45 1 0.01 100
   , color = color
