@@ -20,7 +20,7 @@ type alias Model =
   , stars: List Star
   , keys : Keys
   , position: Vec3
-  , ry: Float
+  , rx: Float
   }
 
 type alias Star =
@@ -52,7 +52,7 @@ type alias Keys =
 init : (Model, Cmd Action)
 init =
   ( {texture = Nothing
-  , ry = 0
+  , rx = 0
   , position = vec3 0 0 10
   , stars = (initStars 50)
   , keys = Keys False False False False False False
@@ -101,8 +101,8 @@ update action model =
       ( { model
         | position = model.position
             |> move model.keys
-        , ry = model.ry
-            |> rotateY model.keys
+        , rx = model.rx
+            |> rotateX model.keys
         , stars = List.map (updateStar dt) model.stars
         }
         , Cmd.none
@@ -153,8 +153,8 @@ updateStar dt star =
              star.dist - 0.1 * dt * effectiveFPMS
   }
 
-rotateY : {keys| up: Bool, down: Bool} -> Float -> Float
-rotateY k velocity =
+rotateX : {keys| up: Bool, down: Bool} -> Float -> Float
+rotateX k velocity =
   let
     direction =
       case (k.up, k.down) of
@@ -223,9 +223,9 @@ starMesh =
 -- VIEW
 
 view : Model -> Html Action
-view {texture, position, ry, stars} =
+view {texture, position, rx, stars} =
   let
-    entities = List.concat (List.map (renderStar ry texture position) stars)
+    entities = List.concat (List.map (renderStar rx texture position) stars)
   in
     div
       []
@@ -246,8 +246,8 @@ view {texture, position, ry, stars} =
       ]
 
 renderStar : Float -> Maybe Texture -> Vec3 -> Star -> List Renderable
-renderStar ry texture position star =
-  renderEntity starMesh ry texture position star
+renderStar rx texture position star =
+  renderEntity starMesh rx texture position star
 
 message : String
 message =
@@ -255,17 +255,17 @@ message =
 
 
 renderEntity : Drawable { position:Vec3, coord:Vec3 } -> Float -> Maybe Texture -> Vec3 -> Star -> List Renderable
-renderEntity mesh ry texture position star =
+renderEntity mesh rx texture position star =
   case texture of
     Nothing ->
      []
     Just tex ->
-     [renderWithConfig [Enable Blend, Disable DepthTest, BlendFunc (SrcAlpha, One)] vertexShader fragmentShader mesh (uniformsStar ry tex position star)]
+     [renderWithConfig [Enable Blend, Disable DepthTest, BlendFunc (SrcAlpha, One)] vertexShader fragmentShader mesh (uniformsStar rx tex position star)]
 
 uniformsStar : Float -> Texture -> Vec3 -> Star -> { texture:Texture, perspective:Mat4, camera:Mat4, worldSpace: Mat4, color: Vec3 }
-uniformsStar ry texture position { dist, rotationSpeed, color, angle } =
+uniformsStar rx texture position { dist, rotationSpeed, color, angle } =
   { texture = texture
-  , worldSpace = makeTranslate position `mul` makeRotate ry (vec3 1 0 0) `mul`  makeRotate angle (vec3 0 0 1) `mul` makeTranslate (vec3 dist 0 0)
+  , worldSpace = makeTranslate position  `mul`  makeRotate angle (vec3 0 0 1) `mul` makeRotate rx (vec3 1 0 0) `mul` makeTranslate (vec3 dist 0 0)
   , camera = makeLookAt (vec3 0 0 -4) (vec3 0 0 -1) (vec3 0 1 0)
   , perspective = makePerspective 45 1 0.01 100
   , color = color
