@@ -20,7 +20,7 @@ type alias Model =
   , stars: List Star
   , keys : Keys
   , position: Vec3
-  , rx: Float
+  , tilt: Float
   }
 
 type alias Star =
@@ -52,7 +52,7 @@ type alias Keys =
 init : (Model, Cmd Action)
 init =
   ( {texture = Nothing
-  , rx = 0
+  , tilt = 0
   , position = vec3 0 0 10
   , stars = (initStars 50)
   , keys = Keys False False False False False False
@@ -101,7 +101,7 @@ update action model =
       ( { model
         | position = model.position
             |> move model.keys
-        , rx = model.rx
+        , tilt = model.tilt
             |> rotateX model.keys
         , stars = List.map (updateStar dt) model.stars
         }
@@ -223,9 +223,9 @@ starMesh =
 -- VIEW
 
 view : Model -> Html Action
-view {texture, position, rx, stars} =
+view {texture, position, tilt, stars} =
   let
-    entities = List.concat (List.map (renderStar rx texture position) stars)
+    entities = List.concat (List.map (renderStar tilt texture position) stars)
   in
     div
       []
@@ -246,8 +246,8 @@ view {texture, position, rx, stars} =
       ]
 
 renderStar : Float -> Maybe Texture -> Vec3 -> Star -> List Renderable
-renderStar rx texture position star =
-  renderEntity starMesh rx texture position star
+renderStar tilt texture position star =
+  renderEntity starMesh tilt texture position star
 
 message : String
 message =
@@ -255,18 +255,18 @@ message =
 
 
 renderEntity : Drawable { position:Vec3, coord:Vec3 } -> Float -> Maybe Texture -> Vec3 -> Star -> List Renderable
-renderEntity mesh rx texture position star =
+renderEntity mesh tilt texture position star =
   case texture of
     Nothing ->
      []
     Just tex ->
-     [renderWithConfig [Enable Blend, Disable DepthTest, BlendFunc (SrcAlpha, One)] vertexShader fragmentShader mesh (uniformsStar rx tex position star)]
+     [renderWithConfig [Enable Blend, Disable DepthTest, BlendFunc (SrcAlpha, One)] vertexShader fragmentShader mesh (uniformsStar tilt tex position star)]
 
 uniformsStar : Float -> Texture -> Vec3 -> Star -> { texture:Texture, perspective:Mat4, camera:Mat4, worldSpace: Mat4, color: Vec3 }
-uniformsStar rx texture position { dist, rotationSpeed, color, angle } =
+uniformsStar tilt texture position { dist, rotationSpeed, color, angle } =
   { texture = texture
-  , worldSpace = makeTranslate position  `mul`  makeRotate angle (vec3 0 0 1) `mul` makeRotate rx (vec3 1 0 0) `mul` makeTranslate (vec3 dist 0 0)
-  , camera = makeLookAt (vec3 0 0 -4) (vec3 0 0 -1) (vec3 0 1 0)
+  , worldSpace = makeRotate tilt (vec3 1 0 0) `mul`  makeRotate angle (vec3 0 1 0) `mul` makeTranslate (vec3 dist 0 0) `mul` makeRotate angle (vec3 0 -1 0)  `mul` makeRotate tilt (vec3 -1 0 0)
+  , camera = makeLookAt (vec3 0 0 -20) (vec3 0 0 -1) (vec3 0 1 0)
   , perspective = makePerspective 45 1 0.01 100
   , color = color
   }
