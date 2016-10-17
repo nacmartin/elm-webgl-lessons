@@ -21,6 +21,7 @@ type alias Model =
   , keys : Keys
   , position: Vec3
   , tilt: Float
+  , spin: Float
   }
 
 type alias Star =
@@ -52,8 +53,9 @@ type alias Keys =
 init : (Model, Cmd Action)
 init =
   ( {texture = Nothing
-  , tilt = 0
-  , position = vec3 0 0 10
+  , tilt = degrees 90
+  , spin = 0
+  , position = vec3 0 0 20
   , stars = (initStars 50)
   , keys = Keys False False False False False False
   }
@@ -103,6 +105,7 @@ update action model =
             |> move model.keys
         , tilt = model.tilt
             |> rotateX model.keys
+        , spin = model.spin + 0.1
         , stars = List.map (updateStar dt) model.stars
         }
         , Cmd.none
@@ -196,8 +199,6 @@ subscriptions _ =
 keyChange : Bool -> Keyboard.KeyCode -> Action
 keyChange on keyCode =
   (case keyCode of
-    37 -> \k -> {k | left = on}
-    39 -> \k -> {k | right = on}
     38 -> \k -> {k | up = on}
     40 -> \k -> {k | down = on}
     87 -> \k -> {k | w = on}
@@ -223,9 +224,9 @@ starMesh =
 -- VIEW
 
 view : Model -> Html Action
-view {texture, position, tilt, stars} =
+view {texture, position, tilt, stars, spin} =
   let
-    entities = List.concat (List.map (renderStar tilt texture position) stars)
+    entities = List.concat (List.map (renderStar tilt texture position spin) stars)
   in
     div
       []
@@ -234,9 +235,7 @@ view {texture, position, tilt, stars} =
           entities
       , div
           [ style
-              [ ("position", "absolute")
-              , ("font-family", "monospace")
-              , ("text-align", "center")
+              [ ("font-family", "monospace")
               , ("left", "20px")
               , ("right", "20px")
               , ("top", "500px")
@@ -245,28 +244,27 @@ view {texture, position, tilt, stars} =
           [ text message]
       ]
 
-renderStar : Float -> Maybe Texture -> Vec3 -> Star -> List Renderable
-renderStar tilt texture position star =
-  renderEntity starMesh tilt texture position star
-
 message : String
 message =
-    "Keys are: F -> change texture mode, Right/Left/Up/Down rotate, w/s -> move camera in/out"
+    "Up/Down rotate, w/s -> move camera in/out"
 
+renderStar : Float -> Maybe Texture -> Vec3 -> Float -> Star -> List Renderable
+renderStar tilt texture position spin star =
+  renderEntity starMesh tilt texture position spin star
 
-renderEntity : Drawable { position:Vec3, coord:Vec3 } -> Float -> Maybe Texture -> Vec3 -> Star -> List Renderable
-renderEntity mesh tilt texture position star =
+renderEntity : Drawable { position:Vec3, coord:Vec3 } -> Float -> Maybe Texture -> Vec3 -> Float -> Star -> List Renderable
+renderEntity mesh tilt texture position spin star =
   case texture of
     Nothing ->
      []
     Just tex ->
-     [renderWithConfig [Enable Blend, Disable DepthTest, BlendFunc (SrcAlpha, One)] vertexShader fragmentShader mesh (uniformsStar tilt tex position star)]
+     [renderWithConfig [Enable Blend, Disable DepthTest, BlendFunc (SrcAlpha, One)] vertexShader fragmentShader mesh (uniformsStar tilt tex position spin star)]
 
-uniformsStar : Float -> Texture -> Vec3 -> Star -> { texture:Texture, perspective:Mat4, camera:Mat4, worldSpace: Mat4, color: Vec3 }
-uniformsStar tilt texture position { dist, rotationSpeed, color, angle } =
+uniformsStar : Float -> Texture -> Vec3 -> Float -> Star -> { texture:Texture, perspective:Mat4, camera:Mat4, worldSpace: Mat4, color: Vec3 }
+uniformsStar tilt texture position spin { dist, rotationSpeed, color, angle } =
   { texture = texture
-  , worldSpace = makeRotate tilt (vec3 1 0 0) `mul`  makeRotate angle (vec3 0 1 0) `mul` makeTranslate (vec3 dist 0 0) `mul` makeRotate angle (vec3 0 -1 0)  `mul` makeRotate tilt (vec3 -1 0 0)
-  , camera = makeLookAt (vec3 0 0 -20) (vec3 0 0 -1) (vec3 0 1 0)
+  , worldSpace = makeRotate tilt (vec3 1 0 0) `mul`  makeRotate angle (vec3 0 1 0) `mul` makeTranslate (vec3 dist 0 0) `mul` makeRotate angle (vec3 0 -1 0)  `mul` makeRotate tilt (vec3 -1 0 0) `mul` makeRotate spin (vec3 0 0 1)
+  , camera = makeLookAt position (vec3 0 0 -1) (vec3 0 1 0)
   , perspective = makePerspective 45 1 0.01 100
   , color = color
   }
