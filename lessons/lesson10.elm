@@ -26,6 +26,7 @@ type alias Model =
   , keys : Keys
   , position: Vec3
   , facing: Vec3
+  , upwardsAngle: Float
   , joggingPhase: Float
   , world: Drawable Vertex
   }
@@ -55,6 +56,7 @@ init =
   , position = vec3 0 0.5 1
   , facing = vec3 0 0 -1
   , joggingPhase = 0
+  , upwardsAngle = 0
   , keys = Keys False False False False False False False False
   , world = Triangle []
   }
@@ -134,6 +136,8 @@ update action model =
           |> move (dt/500) model.keys model.facing model.joggingPhase
         , facing = model.facing
           |> rotateY dt model.keys
+        , upwardsAngle = model.upwardsAngle
+          |> rotateX dt model.keys
         , joggingPhase = model.joggingPhase
           |> updateJoggingPhase dt model.keys
         }
@@ -149,6 +153,22 @@ updateJoggingPhase dt k phase =
     (False, False, True, True) -> phase
     _ -> phase + dt/100
 
+rotateX : Float -> {keys| up: Bool, down: Bool} -> Float -> Float
+rotateX dt k upwardsAngle =
+  let
+    direction =
+      case (k.up, k.down) of
+        (True, False) -> 1
+        (False, True) -> -1
+        _ -> 0
+  in
+    addWithCap 89 -89 upwardsAngle (direction * dt/10)
+
+addWithCap : Float -> Float -> Float -> Float -> Float
+addWithCap max min value toAdd =
+  if value >= max && toAdd > 0 then max
+  else if value <= min && toAdd < 0 then min
+  else value + toAdd
 
 rotateY : Float -> {keys| left: Bool, right: Bool} -> Vec3 -> Vec3
 rotateY dt k facing =
@@ -212,12 +232,12 @@ keyChange on keyCode =
 -- VIEW
 
 view : Model -> Html Action
-view { texture, world, position, facing } =
+view { texture, world, position, facing, upwardsAngle } =
   div
     []
     [ WebGL.toHtml
         [ width 500, height 500, style [("backgroundColor", "black")]  ]
-        ( renderEntity world texture position facing)
+        ( renderEntity world texture position facing upwardsAngle)
     , div
         [ style
             [ ("font-family", "monospace")
@@ -231,21 +251,21 @@ view { texture, world, position, facing } =
 
 message : String
 message =
-    "Up/Down rotate, w/s -> move camera in/out"
+    "Up/Down/Left/Right turn head, w/a/s/d -> move around"
 
-renderEntity : Drawable { position:Vec3, coord:Vec3 } -> Maybe Texture -> Vec3 -> Vec3 -> List Renderable
-renderEntity world texture position facing =
+renderEntity : Drawable { position:Vec3, coord:Vec3 } -> Maybe Texture -> Vec3 -> Vec3 -> Float -> List Renderable
+renderEntity world texture position facing upwardsAngle =
   case texture of
     Nothing ->
      []
     Just tex ->
-     [render vertexShader fragmentShader world (uniforms tex position facing)]
+     [render vertexShader fragmentShader world (uniforms tex position facing upwardsAngle)]
 
-uniforms : Texture -> Vec3 -> Vec3 -> { texture:Texture, perspective:Mat4, camera:Mat4, worldSpace: Mat4 }
-uniforms texture position facing =
+uniforms : Texture -> Vec3 -> Vec3 -> Float -> { texture:Texture, perspective:Mat4, camera:Mat4, worldSpace: Mat4 }
+uniforms texture position facing upwardsAngle =
   { texture = texture
   , worldSpace = makeTranslate (vec3 0 0 0)
-  , camera = makeLookAt position (position `add` facing) j
+  , camera = makeLookAt position (position `add` (transform (makeRotate (degrees upwardsAngle) (facing `cross` j)) facing)) j
   , perspective = makePerspective 45 1 0.01 100
   }
 
