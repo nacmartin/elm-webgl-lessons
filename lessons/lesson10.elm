@@ -68,10 +68,10 @@ init =
 fetchWorld : Cmd Action
 fetchWorld =
   let
-    url =
-      "/meshes/world10.txt"
+    uri =
+      "meshes/world10.txt"
   in
-    Task.perform FetchFail FetchSucceed (Http.getString url `Task.andThen` decodeWorld)
+    Task.perform FetchFail FetchSucceed (Http.getString uri `Task.andThen` decodeWorld)
 
 match : List String -> List (List Regex.Match)
 match lines =
