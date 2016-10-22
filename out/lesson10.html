@@ -7629,10 +7629,6 @@ var _elm_community$elm_webgl$Native_WebGL = function () {
             gl.bindTexture(gl.TEXTURE_2D, tex);
             gl.uniform1i(uniformLocation, currentTexture);
           };
-        case gl.BOOL:
-          return function (value) {
-            gl.uniform1i(uniformLocation, value);
-          };
         default:
           LOG('Unsupported uniform type: ' + uniform.type);
           return function () {};
@@ -14125,14 +14121,14 @@ var _user$project$Main$FetchFail = function (a) {
 	return {ctor: 'FetchFail', _0: a};
 };
 var _user$project$Main$fetchWorld = function () {
-	var url = '/meshes/world10.txt';
+	var uri = 'meshes/world10.txt';
 	return A3(
 		_elm_lang$core$Task$perform,
 		_user$project$Main$FetchFail,
 		_user$project$Main$FetchSucceed,
 		A2(
 			_elm_lang$core$Task$andThen,
-			_evancz$elm_http$Http$getString(url),
+			_evancz$elm_http$Http$getString(uri),
 			_user$project$Main$decodeWorld));
 }();
 var _user$project$Main$Animate = function (a) {

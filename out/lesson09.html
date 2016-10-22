@@ -4751,1625 +4751,6 @@ var _elm_community$elm_linear_algebra$Math_Vector2$getY = _elm_community$elm_lin
 var _elm_community$elm_linear_algebra$Math_Vector2$getX = _elm_community$elm_linear_algebra$Native_Math_Vector2.getX;
 var _elm_community$elm_linear_algebra$Math_Vector2$vec2 = _elm_community$elm_linear_algebra$Native_Math_Vector2.vec2;
 var _elm_community$elm_linear_algebra$Math_Vector2$Vec2 = {ctor: 'Vec2'};
-// eslint-disable-next-line no-unused-vars
-var _elm_community$elm_webgl$Native_WebGL = function () {
-
-  // setup logging
-  // eslint-disable-next-line no-unused-vars
-  function LOG(msg) {
-    // console.log(msg);
-  }
-
-  var Utils = _elm_lang$core$Native_Utils;
-
-  var rAF = typeof requestAnimationFrame !== 'undefined' ?
-    requestAnimationFrame :
-    function (cb) { setTimeout(cb, 1000 / 60); };
-
-  function unsafeCoerceGLSL(src) {
-    return { src: src };
-  }
-
-  function loadTexture(source) {
-    return _elm_lang$core$Native_Scheduler.nativeBinding(function (callback) {
-      var img = new Image();
-      img.onload = function () {
-        return callback(_elm_lang$core$Native_Scheduler.succeed({ ctor: 'Texture', img: img }));
-      };
-      img.onerror = function () {
-        return callback(_elm_lang$core$Native_Scheduler.fail({ ctor: 'Error' }));
-      };
-      img.crossOrigin = 'Anonymous';
-      img.src = source;
-    });
-  }
-
-  function loadTextureRaw(filter, source) {
-    return _elm_lang$core$Native_Scheduler.nativeBinding(function (callback) {
-      var img = new Image();
-      img.onload = function () {
-        return callback(_elm_lang$core$Native_Scheduler.succeed({ ctor: 'RawTexture', img: img }));
-      };
-      img.onerror = function () {
-        return callback(_elm_lang$core$Native_Scheduler.fail({ ctor: 'Error' }));
-      };
-      img.crossOrigin = 'Anonymous';
-      img.src = source;
-    });
-  }
-
-  function textureSize(texture) {
-    return Utils.Tuple2(texture.img.width, texture.img.height);
-  }
-
-  function render(vert, frag, buffer, uniforms, functionCalls) {
-
-    if (!buffer.guid) {
-      buffer.guid = Utils.guid();
-    }
-
-    return {
-      vert: vert,
-      frag: frag,
-      buffer: buffer,
-      uniforms: uniforms,
-      functionCalls: functionCalls
-    };
-
-  }
-
-  function do_texture(gl, texture) {
-
-    var tex = gl.createTexture();
-    LOG('Created texture');
-
-    gl.bindTexture(gl.TEXTURE_2D, tex);
-    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, texture.img);
-    switch (texture.ctor) {
-      case 'Texture':
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-        break;
-      case 'RawTexture':
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-        break;
-    }
-    gl.generateMipmap(gl.TEXTURE_2D);
-    //gl.bindTexture(gl.TEXTURE0, null);
-    return tex;
-
-  }
-
-  function do_compile(gl, src, tipe) {
-
-    var shader = gl.createShader(tipe);
-    LOG('Created shader');
-
-    gl.shaderSource(shader, src);
-    gl.compileShader(shader);
-    var compile = gl.COMPILE_STATUS;
-    if (!gl.getShaderParameter(shader, compile)) {
-      throw gl.getShaderInfoLog(shader);
-    }
-
-    return shader;
-
-  }
-
-  function do_link(gl, vshader, fshader) {
-
-    var program = gl.createProgram();
-    LOG('Created program');
-
-    gl.attachShader(program, vshader);
-    gl.attachShader(program, fshader);
-    gl.linkProgram(program);
-    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-      throw gl.getProgramInfoLog(program);
-    }
-
-    return program;
-
-  }
-
-  function get_render_info(gl, render_type) {
-    switch (render_type) {
-      case 'Triangle':
-        return { mode: gl.TRIANGLES, elemSize: 3 };
-      case 'LineStrip':
-        return { mode: gl.LINE_STRIP, elemSize: 1 };
-      case 'LineLoop':
-        return { mode: gl.LINE_LOOP, elemSize: 1 };
-      case 'Points':
-        return { mode: gl.POINTS, elemSize: 1 };
-      case 'Lines':
-        return { mode: gl.LINES, elemSize: 2 };
-      case 'TriangleStrip':
-        return { mode: gl.TRIANGLE_STRIP, elemSize: 1 };
-      case 'TriangleFan':
-        return { mode: gl.TRIANGLE_FAN, elemSize: 1 };
-    }
-  }
-
-  function get_attribute_info(gl, type) {
-    switch (type) {
-      case gl.FLOAT:
-        return { size: 1, type: Float32Array, baseType: gl.FLOAT };
-      case gl.FLOAT_VEC2:
-        return { size: 2, type: Float32Array, baseType: gl.FLOAT };
-      case gl.FLOAT_VEC3:
-        return { size: 3, type: Float32Array, baseType: gl.FLOAT };
-      case gl.FLOAT_VEC4:
-        return { size: 4, type: Float32Array, baseType: gl.FLOAT };
-      case gl.INT:
-        return { size: 1, type: Int32Array, baseType: gl.INT };
-      case gl.INT_VEC2:
-        return { size: 2, type: Int32Array, baseType: gl.INT };
-      case gl.INT_VEC3:
-        return { size: 3, type: Int32Array, baseType: gl.INT };
-      case gl.INT_VEC4:
-        return { size: 4, type: Int32Array, baseType: gl.INT };
-    }
-  }
-
-  /**
-        Form the buffer for a given attribute.
-
-        @param gl gl context
-        @param attribute the attribute to bind to. We use its name to grab the record by name and also to know
-                how many elements we need to grab.
-        @param bufferElems The list coming in from elm.
-        @param elem_length The length of the number of vertices that complete one 'thing' based on the drawing mode.
-            ie, 2 for Lines, 3 for Triangles, etc.
-  */
-  function do_bind_attribute(gl, attribute, bufferElems, elem_length) {
-    var idxKeys = [];
-    for (var i = 0; i < elem_length; i++) {
-      idxKeys.push('_' + i);
-    }
-
-    function dataFill(data, cnt, fillOffset, elem, key) {
-      if (elem_length == 1) {
-        for (var i = 0; i < cnt; i++) {
-          data[fillOffset++] = cnt === 1 ? elem[key] : elem[key][i];
-        }
-      } else {
-        idxKeys.forEach(function (idx) {
-          for (var i = 0; i < cnt; i++) {
-            data[fillOffset++] = (cnt === 1 ? elem[idx][key] : elem[idx][key][i]);
-          }
-        });
-      }
-    }
-
-    var attributeInfo = get_attribute_info(gl, attribute.type);
-
-    if (attributeInfo === undefined) {
-      throw new Error('No info available for: ' + attribute.type);
-    }
-
-    var data_idx = 0;
-    var array = new attributeInfo.type( _elm_lang$core$List$length(bufferElems) * attributeInfo.size * elem_length);
-
-    A2(_elm_lang$core$List$map, function (elem) {
-      dataFill(array, attributeInfo.size, data_idx, elem, attribute.name);
-      data_idx += attributeInfo.size * elem_length;
-    }, bufferElems);
-
-    var buffer = gl.createBuffer();
-    LOG('Created attribute buffer ' + attribute.name);
-
-    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-    gl.bufferData(gl.ARRAY_BUFFER, array, gl.STATIC_DRAW);
-    return buffer;
-  }
-
-  /**
-    This sets up the binding cacheing buffers.
-
-    We don't actually bind any buffers now except for the indices buffer, which we fill with 0..n. The problem
-    with filling the buffers here is that it is possible to have a buffer shared between two webgl shaders; which
-    could have different active attributes. If we bind it here against a particular program, we might not bind
-    them all. That final bind is now done right before drawing.
-
-    @param gl gl context
-    @param bufferElems The list coming in from elm.
-    @param elem_length The length of the number of vertices that complete one 'thing' based on the drawing mode.
-            ie, 2 for Lines, 3 for Triangles, etc.
-  */
-  function do_bind_setup(gl, bufferElems, elem_length) {
-    var buffers = {};
-
-    var numIndices = elem_length * _elm_lang$core$List$length(bufferElems);
-    var indices = new Uint16Array(numIndices);
-    for (var i = 0; i < numIndices; i += 1) {
-      indices[i] = i;
-    }
-    var indexBuffer = gl.createBuffer();
-    LOG('Created index buffer');
-
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indices, gl.STATIC_DRAW);
-
-    var bufferObject = {
-      numIndices: numIndices,
-      indexBuffer: indexBuffer,
-      buffers: buffers
-    };
-
-    return bufferObject;
-
-  }
-
-  function getProgID(vertID, fragID) {
-    return vertID + '#' + fragID;
-  }
-
-  function drawGL(domNode, data) {
-
-    var model = data.model;
-    var gl = model.cache.gl;
-
-    if (!gl) {
-      return domNode;
-    }
-
-    gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    LOG('Drawing');
-
-    function drawEntity(render) {
-      if (_elm_lang$core$List$length(render.buffer._0) === 0) {
-        return;
-      }
-
-      var progid;
-      var program;
-      if (render.vert.id && render.frag.id) {
-        progid = getProgID(render.vert.id, render.frag.id);
-        program = model.cache.programs[progid];
-      }
-
-      if (!program) {
-
-        var vshader;
-        if (render.vert.id) {
-          vshader = model.cache.shaders[render.vert.id];
-        } else {
-          render.vert.id = Utils.guid();
-        }
-
-        if (!vshader) {
-          vshader = do_compile(gl, render.vert.src, gl.VERTEX_SHADER);
-          model.cache.shaders[render.vert.id] = vshader;
-        }
-
-        var fshader;
-        if (render.frag.id) {
-          fshader = model.cache.shaders[render.frag.id];
-        } else {
-          render.frag.id = Utils.guid();
-        }
-
-        if (!fshader) {
-          fshader = do_compile(gl, render.frag.src, gl.FRAGMENT_SHADER);
-          model.cache.shaders[render.frag.id] = fshader;
-        }
-
-        program = do_link(gl, vshader, fshader);
-        progid = getProgID(render.vert.id, render.frag.id);
-        model.cache.programs[progid] = program;
-
-      }
-
-      gl.useProgram(program);
-
-      progid = progid || getProgID(render.vert.id, render.frag.id);
-      var setters = model.cache.uniformSetters[progid];
-      if (!setters) {
-        setters = createUniformSetters(gl, model, program);
-        model.cache.uniformSetters[progid] = setters;
-      }
-
-      setUniforms(setters, render.uniforms);
-
-      var renderType = get_render_info(gl, render.buffer.ctor);
-      var buffer = model.cache.buffers[render.buffer.guid];
-
-      if (!buffer) {
-        buffer = do_bind_setup(gl, render.buffer._0, renderType.elemSize);
-        model.cache.buffers[render.buffer.guid] = buffer;
-      }
-
-      var numIndices = buffer.numIndices;
-      var indexBuffer = buffer.indexBuffer;
-      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
-
-      var numAttributes = gl.getProgramParameter(program, gl.ACTIVE_ATTRIBUTES);
-
-      for (var i = 0; i < numAttributes; i += 1) {
-        var attribute = gl.getActiveAttrib(program, i);
-
-        var attribLocation = gl.getAttribLocation(program, attribute.name);
-        gl.enableVertexAttribArray(attribLocation);
-
-        if (buffer.buffers[attribute.name] === undefined) {
-          buffer.buffers[attribute.name] = do_bind_attribute(gl, attribute, render.buffer._0, renderType.elemSize);
-        }
-        var attributeBuffer = buffer.buffers[attribute.name];
-        var attributeInfo = get_attribute_info(gl, attribute.type);
-
-        A2(_elm_lang$core$List$map, function (functionCall) {
-          functionCall(gl);
-        }, render.functionCalls);
-
-        gl.bindBuffer(gl.ARRAY_BUFFER, attributeBuffer);
-        gl.vertexAttribPointer(attribLocation, attributeInfo.size, attributeInfo.baseType, false, 0, 0);
-      }
-      gl.drawElements(renderType.mode, numIndices, gl.UNSIGNED_SHORT, 0);
-
-    }
-
-    A2(_elm_lang$core$List$map, drawEntity, model.renderables);
-    return domNode;
-  }
-
-  function createUniformSetters(gl, model, program) {
-
-    var textureCounter = 0;
-    function createUniformSetter(program, uniform) {
-      var uniformLocation = gl.getUniformLocation(program, uniform.name);
-      switch (uniform.type) {
-        case gl.INT:
-          return function (value) {
-            gl.uniform1i(uniformLocation, value);
-          };
-        case gl.FLOAT:
-          return function (value) {
-            gl.uniform1f(uniformLocation, value);
-          };
-        case gl.FLOAT_VEC2:
-          return function (value) {
-            gl.uniform2fv(uniformLocation, value);
-          };
-        case gl.FLOAT_VEC3:
-          return function (value) {
-            gl.uniform3fv(uniformLocation, value);
-          };
-        case gl.FLOAT_VEC4:
-          return function (value) {
-            gl.uniform4fv(uniformLocation, value);
-          };
-        case gl.FLOAT_MAT4:
-          return function (value) {
-            gl.uniformMatrix4fv(uniformLocation, false, value);
-          };
-        case gl.SAMPLER_2D:
-          var currentTexture = textureCounter;
-          var activeName = 'TEXTURE' + currentTexture;
-          textureCounter += 1;
-          return function (value) {
-            var texture = value;
-            var tex = undefined;
-            if (texture.id) {
-              tex = model.cache.textures[texture.id];
-            } else {
-              texture.id = Utils.guid();
-            }
-            if (!tex) {
-              tex = do_texture(gl, texture);
-              model.cache.textures[texture.id] = tex;
-            }
-            gl.activeTexture(gl[activeName]);
-            gl.bindTexture(gl.TEXTURE_2D, tex);
-            gl.uniform1i(uniformLocation, currentTexture);
-          };
-        case gl.BOOL:
-          return function (value) {
-            gl.uniform1i(uniformLocation, value);
-          };
-        default:
-          LOG('Unsupported uniform type: ' + uniform.type);
-          return function () {};
-      }
-    }
-
-    var uniformSetters = {};
-    var numUniforms = gl.getProgramParameter(program, gl.ACTIVE_UNIFORMS);
-    for (var i = 0; i < numUniforms; i += 1) {
-      var uniform = gl.getActiveUniform(program, i);
-      uniformSetters[uniform.name] = createUniformSetter(program, uniform);
-    }
-
-    return uniformSetters;
-  }
-
-  function setUniforms(setters, values) {
-    Object.keys(values).forEach(function (name) {
-      var setter = setters[name];
-      if (setter) {
-        setter(values[name]);
-      }
-    });
-  }
-
-  function enable(capability) {
-    return function (gl) {
-      gl.enable(gl[capability]);
-    };
-  }
-
-  function disable(capability) {
-    return function (gl) {
-      gl.disable(gl[capability]);
-    };
-  }
-
-  function blendColor(r, g, b, a) {
-    return function (gl) {
-      gl.blendColor(r, g, b, a);
-    };
-  }
-
-  function blendEquation(mode) {
-    return function (gl) {
-      gl.blendEquation(gl[mode]);
-    };
-  }
-
-  function blendEquationSeparate(modeRGB, modeAlpha) {
-    return function (gl) {
-      gl.blendEquationSeparate(gl[modeRGB], gl[modeAlpha]);
-    };
-  }
-
-  function blendFunc(src, dst) {
-    return function (gl) {
-      gl.blendFunc(gl[src], gl[dst]);
-    };
-  }
-
-  function depthFunc(mode) {
-    return function (gl) {
-      gl.depthFunc(gl[mode]);
-    };
-  }
-
-  function sampleCoverage(value, invert) {
-    return function (gl) {
-      gl.sampleCoverage(value, invert);
-    };
-  }
-
-  function stencilFunc(func, ref, mask) {
-    return function (gl) {
-      gl.stencilFunc(gl[func], ref, mask);
-    };
-  }
-
-  function stencilFuncSeparate(face, func, ref, mask) {
-    return function (gl) {
-      gl.stencilFuncSeparate(gl[face], gl[func], ref, mask);
-    };
-  }
-
-  function stencilOperation(fail, zfail, zpass) {
-    return function (gl) {
-      gl.stencilOp(gl[fail], gl[zfail], gl[zpass]);
-    };
-  }
-
-  function stencilOperationSeparate(face, fail, zfail, zpass) {
-    return function (gl) {
-      gl.stencilOpSeparate(gl[face], gl[fail], gl[zfail], gl[zpass]);
-    };
-  }
-
-
-  // VIRTUAL-DOM WIDGETS
-
-  function toHtml(functionCalls, factList, renderables) {
-    var model = {
-      functionCalls: functionCalls,
-      renderables: renderables,
-      cache: {}
-    };
-    return _elm_lang$virtual_dom$Native_VirtualDom.custom(factList, model, implementation);
-  }
-
-  // WIDGET IMPLEMENTATION
-  var implementation = {
-    render: renderCanvas,
-    diff: diff
-  };
-
-
-  function renderCanvas(model) {
-
-    LOG('Render canvas');
-    var canvas = document.createElement('canvas');
-    var gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-
-    if (gl) {
-      A2(_elm_lang$core$List$map, function (functionCall) {
-        functionCall(gl);
-      }, model.functionCalls);
-    } else {
-      canvas = document.createElement('div');
-      canvas.innerHTML = '<a href="http://get.webgl.org/">Enable WebGL</a> to see this content!';
-    }
-
-    model.cache = model.cache || {};
-    model.cache.gl = gl;
-    model.cache.shaders = [];
-    model.cache.programs = {};
-    model.cache.uniformSetters = {};
-    model.cache.buffers = [];
-    model.cache.textures = [];
-
-    // Render for the first time.
-    // This has to be done in animation frame,
-    // because the canvas is not in the DOM yet,
-    // when renderCanvas is called by virtual-dom
-    rAF(function () {
-      drawGL(canvas, {model: model});
-    });
-
-    return canvas;
-  }
-
-
-  function diff(oldModel, newModel) {
-    newModel.model.cache = oldModel.model.cache;
-    return {
-      applyPatch: drawGL,
-      data: newModel
-    };
-  }
-
-  return {
-    unsafeCoerceGLSL: unsafeCoerceGLSL,
-    textureSize: textureSize,
-    loadTexture: loadTexture,
-    render: F5(render),
-    toHtml: F3(toHtml),
-    enable: enable,
-    disable: disable,
-    blendColor: F4(blendColor),
-    blendEquation: blendEquation,
-    blendEquationSeparate: F2(blendEquationSeparate),
-    blendFunc: F2(blendFunc),
-    depthFunc: depthFunc,
-    sampleCoverage: F2(sampleCoverage),
-    stencilFunc: F3(stencilFunc),
-    stencilFuncSeparate: F4(stencilFuncSeparate),
-    stencilOperation: F3(stencilOperation),
-    stencilOperationSeparate: F4(stencilOperationSeparate),
-    loadTextureRaw: F2(loadTextureRaw)
-  };
-
-}();
-//import Native.List //
-
-var _elm_lang$core$Native_Array = function() {
-
-// A RRB-Tree has two distinct data types.
-// Leaf -> "height"  is always 0
-//         "table"   is an array of elements
-// Node -> "height"  is always greater than 0
-//         "table"   is an array of child nodes
-//         "lengths" is an array of accumulated lengths of the child nodes
-
-// M is the maximal table size. 32 seems fast. E is the allowed increase
-// of search steps when concatting to find an index. Lower values will
-// decrease balancing, but will increase search steps.
-var M = 32;
-var E = 2;
-
-// An empty array.
-var empty = {
-	ctor: '_Array',
-	height: 0,
-	table: []
-};
-
-
-function get(i, array)
-{
-	if (i < 0 || i >= length(array))
-	{
-		throw new Error(
-			'Index ' + i + ' is out of range. Check the length of ' +
-			'your array first or use getMaybe or getWithDefault.');
-	}
-	return unsafeGet(i, array);
-}
-
-
-function unsafeGet(i, array)
-{
-	for (var x = array.height; x > 0; x--)
-	{
-		var slot = i >> (x * 5);
-		while (array.lengths[slot] <= i)
-		{
-			slot++;
-		}
-		if (slot > 0)
-		{
-			i -= array.lengths[slot - 1];
-		}
-		array = array.table[slot];
-	}
-	return array.table[i];
-}
-
-
-// Sets the value at the index i. Only the nodes leading to i will get
-// copied and updated.
-function set(i, item, array)
-{
-	if (i < 0 || length(array) <= i)
-	{
-		return array;
-	}
-	return unsafeSet(i, item, array);
-}
-
-
-function unsafeSet(i, item, array)
-{
-	array = nodeCopy(array);
-
-	if (array.height === 0)
-	{
-		array.table[i] = item;
-	}
-	else
-	{
-		var slot = getSlot(i, array);
-		if (slot > 0)
-		{
-			i -= array.lengths[slot - 1];
-		}
-		array.table[slot] = unsafeSet(i, item, array.table[slot]);
-	}
-	return array;
-}
-
-
-function initialize(len, f)
-{
-	if (len <= 0)
-	{
-		return empty;
-	}
-	var h = Math.floor( Math.log(len) / Math.log(M) );
-	return initialize_(f, h, 0, len);
-}
-
-function initialize_(f, h, from, to)
-{
-	if (h === 0)
-	{
-		var table = new Array((to - from) % (M + 1));
-		for (var i = 0; i < table.length; i++)
-		{
-		  table[i] = f(from + i);
-		}
-		return {
-			ctor: '_Array',
-			height: 0,
-			table: table
-		};
-	}
-
-	var step = Math.pow(M, h);
-	var table = new Array(Math.ceil((to - from) / step));
-	var lengths = new Array(table.length);
-	for (var i = 0; i < table.length; i++)
-	{
-		table[i] = initialize_(f, h - 1, from + (i * step), Math.min(from + ((i + 1) * step), to));
-		lengths[i] = length(table[i]) + (i > 0 ? lengths[i-1] : 0);
-	}
-	return {
-		ctor: '_Array',
-		height: h,
-		table: table,
-		lengths: lengths
-	};
-}
-
-function fromList(list)
-{
-	if (list.ctor === '[]')
-	{
-		return empty;
-	}
-
-	// Allocate M sized blocks (table) and write list elements to it.
-	var table = new Array(M);
-	var nodes = [];
-	var i = 0;
-
-	while (list.ctor !== '[]')
-	{
-		table[i] = list._0;
-		list = list._1;
-		i++;
-
-		// table is full, so we can push a leaf containing it into the
-		// next node.
-		if (i === M)
-		{
-			var leaf = {
-				ctor: '_Array',
-				height: 0,
-				table: table
-			};
-			fromListPush(leaf, nodes);
-			table = new Array(M);
-			i = 0;
-		}
-	}
-
-	// Maybe there is something left on the table.
-	if (i > 0)
-	{
-		var leaf = {
-			ctor: '_Array',
-			height: 0,
-			table: table.splice(0, i)
-		};
-		fromListPush(leaf, nodes);
-	}
-
-	// Go through all of the nodes and eventually push them into higher nodes.
-	for (var h = 0; h < nodes.length - 1; h++)
-	{
-		if (nodes[h].table.length > 0)
-		{
-			fromListPush(nodes[h], nodes);
-		}
-	}
-
-	var head = nodes[nodes.length - 1];
-	if (head.height > 0 && head.table.length === 1)
-	{
-		return head.table[0];
-	}
-	else
-	{
-		return head;
-	}
-}
-
-// Push a node into a higher node as a child.
-function fromListPush(toPush, nodes)
-{
-	var h = toPush.height;
-
-	// Maybe the node on this height does not exist.
-	if (nodes.length === h)
-	{
-		var node = {
-			ctor: '_Array',
-			height: h + 1,
-			table: [],
-			lengths: []
-		};
-		nodes.push(node);
-	}
-
-	nodes[h].table.push(toPush);
-	var len = length(toPush);
-	if (nodes[h].lengths.length > 0)
-	{
-		len += nodes[h].lengths[nodes[h].lengths.length - 1];
-	}
-	nodes[h].lengths.push(len);
-
-	if (nodes[h].table.length === M)
-	{
-		fromListPush(nodes[h], nodes);
-		nodes[h] = {
-			ctor: '_Array',
-			height: h + 1,
-			table: [],
-			lengths: []
-		};
-	}
-}
-
-// Pushes an item via push_ to the bottom right of a tree.
-function push(item, a)
-{
-	var pushed = push_(item, a);
-	if (pushed !== null)
-	{
-		return pushed;
-	}
-
-	var newTree = create(item, a.height);
-	return siblise(a, newTree);
-}
-
-// Recursively tries to push an item to the bottom-right most
-// tree possible. If there is no space left for the item,
-// null will be returned.
-function push_(item, a)
-{
-	// Handle resursion stop at leaf level.
-	if (a.height === 0)
-	{
-		if (a.table.length < M)
-		{
-			var newA = {
-				ctor: '_Array',
-				height: 0,
-				table: a.table.slice()
-			};
-			newA.table.push(item);
-			return newA;
-		}
-		else
-		{
-		  return null;
-		}
-	}
-
-	// Recursively push
-	var pushed = push_(item, botRight(a));
-
-	// There was space in the bottom right tree, so the slot will
-	// be updated.
-	if (pushed !== null)
-	{
-		var newA = nodeCopy(a);
-		newA.table[newA.table.length - 1] = pushed;
-		newA.lengths[newA.lengths.length - 1]++;
-		return newA;
-	}
-
-	// When there was no space left, check if there is space left
-	// for a new slot with a tree which contains only the item
-	// at the bottom.
-	if (a.table.length < M)
-	{
-		var newSlot = create(item, a.height - 1);
-		var newA = nodeCopy(a);
-		newA.table.push(newSlot);
-		newA.lengths.push(newA.lengths[newA.lengths.length - 1] + length(newSlot));
-		return newA;
-	}
-	else
-	{
-		return null;
-	}
-}
-
-// Converts an array into a list of elements.
-function toList(a)
-{
-	return toList_(_elm_lang$core$Native_List.Nil, a);
-}
-
-function toList_(list, a)
-{
-	for (var i = a.table.length - 1; i >= 0; i--)
-	{
-		list =
-			a.height === 0
-				? _elm_lang$core$Native_List.Cons(a.table[i], list)
-				: toList_(list, a.table[i]);
-	}
-	return list;
-}
-
-// Maps a function over the elements of an array.
-function map(f, a)
-{
-	var newA = {
-		ctor: '_Array',
-		height: a.height,
-		table: new Array(a.table.length)
-	};
-	if (a.height > 0)
-	{
-		newA.lengths = a.lengths;
-	}
-	for (var i = 0; i < a.table.length; i++)
-	{
-		newA.table[i] =
-			a.height === 0
-				? f(a.table[i])
-				: map(f, a.table[i]);
-	}
-	return newA;
-}
-
-// Maps a function over the elements with their index as first argument.
-function indexedMap(f, a)
-{
-	return indexedMap_(f, a, 0);
-}
-
-function indexedMap_(f, a, from)
-{
-	var newA = {
-		ctor: '_Array',
-		height: a.height,
-		table: new Array(a.table.length)
-	};
-	if (a.height > 0)
-	{
-		newA.lengths = a.lengths;
-	}
-	for (var i = 0; i < a.table.length; i++)
-	{
-		newA.table[i] =
-			a.height === 0
-				? A2(f, from + i, a.table[i])
-				: indexedMap_(f, a.table[i], i == 0 ? from : from + a.lengths[i - 1]);
-	}
-	return newA;
-}
-
-function foldl(f, b, a)
-{
-	if (a.height === 0)
-	{
-		for (var i = 0; i < a.table.length; i++)
-		{
-			b = A2(f, a.table[i], b);
-		}
-	}
-	else
-	{
-		for (var i = 0; i < a.table.length; i++)
-		{
-			b = foldl(f, b, a.table[i]);
-		}
-	}
-	return b;
-}
-
-function foldr(f, b, a)
-{
-	if (a.height === 0)
-	{
-		for (var i = a.table.length; i--; )
-		{
-			b = A2(f, a.table[i], b);
-		}
-	}
-	else
-	{
-		for (var i = a.table.length; i--; )
-		{
-			b = foldr(f, b, a.table[i]);
-		}
-	}
-	return b;
-}
-
-// TODO: currently, it slices the right, then the left. This can be
-// optimized.
-function slice(from, to, a)
-{
-	if (from < 0)
-	{
-		from += length(a);
-	}
-	if (to < 0)
-	{
-		to += length(a);
-	}
-	return sliceLeft(from, sliceRight(to, a));
-}
-
-function sliceRight(to, a)
-{
-	if (to === length(a))
-	{
-		return a;
-	}
-
-	// Handle leaf level.
-	if (a.height === 0)
-	{
-		var newA = { ctor:'_Array', height:0 };
-		newA.table = a.table.slice(0, to);
-		return newA;
-	}
-
-	// Slice the right recursively.
-	var right = getSlot(to, a);
-	var sliced = sliceRight(to - (right > 0 ? a.lengths[right - 1] : 0), a.table[right]);
-
-	// Maybe the a node is not even needed, as sliced contains the whole slice.
-	if (right === 0)
-	{
-		return sliced;
-	}
-
-	// Create new node.
-	var newA = {
-		ctor: '_Array',
-		height: a.height,
-		table: a.table.slice(0, right),
-		lengths: a.lengths.slice(0, right)
-	};
-	if (sliced.table.length > 0)
-	{
-		newA.table[right] = sliced;
-		newA.lengths[right] = length(sliced) + (right > 0 ? newA.lengths[right - 1] : 0);
-	}
-	return newA;
-}
-
-function sliceLeft(from, a)
-{
-	if (from === 0)
-	{
-		return a;
-	}
-
-	// Handle leaf level.
-	if (a.height === 0)
-	{
-		var newA = { ctor:'_Array', height:0 };
-		newA.table = a.table.slice(from, a.table.length + 1);
-		return newA;
-	}
-
-	// Slice the left recursively.
-	var left = getSlot(from, a);
-	var sliced = sliceLeft(from - (left > 0 ? a.lengths[left - 1] : 0), a.table[left]);
-
-	// Maybe the a node is not even needed, as sliced contains the whole slice.
-	if (left === a.table.length - 1)
-	{
-		return sliced;
-	}
-
-	// Create new node.
-	var newA = {
-		ctor: '_Array',
-		height: a.height,
-		table: a.table.slice(left, a.table.length + 1),
-		lengths: new Array(a.table.length - left)
-	};
-	newA.table[0] = sliced;
-	var len = 0;
-	for (var i = 0; i < newA.table.length; i++)
-	{
-		len += length(newA.table[i]);
-		newA.lengths[i] = len;
-	}
-
-	return newA;
-}
-
-// Appends two trees.
-function append(a,b)
-{
-	if (a.table.length === 0)
-	{
-		return b;
-	}
-	if (b.table.length === 0)
-	{
-		return a;
-	}
-
-	var c = append_(a, b);
-
-	// Check if both nodes can be crunshed together.
-	if (c[0].table.length + c[1].table.length <= M)
-	{
-		if (c[0].table.length === 0)
-		{
-			return c[1];
-		}
-		if (c[1].table.length === 0)
-		{
-			return c[0];
-		}
-
-		// Adjust .table and .lengths
-		c[0].table = c[0].table.concat(c[1].table);
-		if (c[0].height > 0)
-		{
-			var len = length(c[0]);
-			for (var i = 0; i < c[1].lengths.length; i++)
-			{
-				c[1].lengths[i] += len;
-			}
-			c[0].lengths = c[0].lengths.concat(c[1].lengths);
-		}
-
-		return c[0];
-	}
-
-	if (c[0].height > 0)
-	{
-		var toRemove = calcToRemove(a, b);
-		if (toRemove > E)
-		{
-			c = shuffle(c[0], c[1], toRemove);
-		}
-	}
-
-	return siblise(c[0], c[1]);
-}
-
-// Returns an array of two nodes; right and left. One node _may_ be empty.
-function append_(a, b)
-{
-	if (a.height === 0 && b.height === 0)
-	{
-		return [a, b];
-	}
-
-	if (a.height !== 1 || b.height !== 1)
-	{
-		if (a.height === b.height)
-		{
-			a = nodeCopy(a);
-			b = nodeCopy(b);
-			var appended = append_(botRight(a), botLeft(b));
-
-			insertRight(a, appended[1]);
-			insertLeft(b, appended[0]);
-		}
-		else if (a.height > b.height)
-		{
-			a = nodeCopy(a);
-			var appended = append_(botRight(a), b);
-
-			insertRight(a, appended[0]);
-			b = parentise(appended[1], appended[1].height + 1);
-		}
-		else
-		{
-			b = nodeCopy(b);
-			var appended = append_(a, botLeft(b));
-
-			var left = appended[0].table.length === 0 ? 0 : 1;
-			var right = left === 0 ? 1 : 0;
-			insertLeft(b, appended[left]);
-			a = parentise(appended[right], appended[right].height + 1);
-		}
-	}
-
-	// Check if balancing is needed and return based on that.
-	if (a.table.length === 0 || b.table.length === 0)
-	{
-		return [a, b];
-	}
-
-	var toRemove = calcToRemove(a, b);
-	if (toRemove <= E)
-	{
-		return [a, b];
-	}
-	return shuffle(a, b, toRemove);
-}
-
-// Helperfunctions for append_. Replaces a child node at the side of the parent.
-function insertRight(parent, node)
-{
-	var index = parent.table.length - 1;
-	parent.table[index] = node;
-	parent.lengths[index] = length(node);
-	parent.lengths[index] += index > 0 ? parent.lengths[index - 1] : 0;
-}
-
-function insertLeft(parent, node)
-{
-	if (node.table.length > 0)
-	{
-		parent.table[0] = node;
-		parent.lengths[0] = length(node);
-
-		var len = length(parent.table[0]);
-		for (var i = 1; i < parent.lengths.length; i++)
-		{
-			len += length(parent.table[i]);
-			parent.lengths[i] = len;
-		}
-	}
-	else
-	{
-		parent.table.shift();
-		for (var i = 1; i < parent.lengths.length; i++)
-		{
-			parent.lengths[i] = parent.lengths[i] - parent.lengths[0];
-		}
-		parent.lengths.shift();
-	}
-}
-
-// Returns the extra search steps for E. Refer to the paper.
-function calcToRemove(a, b)
-{
-	var subLengths = 0;
-	for (var i = 0; i < a.table.length; i++)
-	{
-		subLengths += a.table[i].table.length;
-	}
-	for (var i = 0; i < b.table.length; i++)
-	{
-		subLengths += b.table[i].table.length;
-	}
-
-	var toRemove = a.table.length + b.table.length;
-	return toRemove - (Math.floor((subLengths - 1) / M) + 1);
-}
-
-// get2, set2 and saveSlot are helpers for accessing elements over two arrays.
-function get2(a, b, index)
-{
-	return index < a.length
-		? a[index]
-		: b[index - a.length];
-}
-
-function set2(a, b, index, value)
-{
-	if (index < a.length)
-	{
-		a[index] = value;
-	}
-	else
-	{
-		b[index - a.length] = value;
-	}
-}
-
-function saveSlot(a, b, index, slot)
-{
-	set2(a.table, b.table, index, slot);
-
-	var l = (index === 0 || index === a.lengths.length)
-		? 0
-		: get2(a.lengths, a.lengths, index - 1);
-
-	set2(a.lengths, b.lengths, index, l + length(slot));
-}
-
-// Creates a node or leaf with a given length at their arrays for perfomance.
-// Is only used by shuffle.
-function createNode(h, length)
-{
-	if (length < 0)
-	{
-		length = 0;
-	}
-	var a = {
-		ctor: '_Array',
-		height: h,
-		table: new Array(length)
-	};
-	if (h > 0)
-	{
-		a.lengths = new Array(length);
-	}
-	return a;
-}
-
-// Returns an array of two balanced nodes.
-function shuffle(a, b, toRemove)
-{
-	var newA = createNode(a.height, Math.min(M, a.table.length + b.table.length - toRemove));
-	var newB = createNode(a.height, newA.table.length - (a.table.length + b.table.length - toRemove));
-
-	// Skip the slots with size M. More precise: copy the slot references
-	// to the new node
-	var read = 0;
-	while (get2(a.table, b.table, read).table.length % M === 0)
-	{
-		set2(newA.table, newB.table, read, get2(a.table, b.table, read));
-		set2(newA.lengths, newB.lengths, read, get2(a.lengths, b.lengths, read));
-		read++;
-	}
-
-	// Pulling items from left to right, caching in a slot before writing
-	// it into the new nodes.
-	var write = read;
-	var slot = new createNode(a.height - 1, 0);
-	var from = 0;
-
-	// If the current slot is still containing data, then there will be at
-	// least one more write, so we do not break this loop yet.
-	while (read - write - (slot.table.length > 0 ? 1 : 0) < toRemove)
-	{
-		// Find out the max possible items for copying.
-		var source = get2(a.table, b.table, read);
-		var to = Math.min(M - slot.table.length, source.table.length);
-
-		// Copy and adjust size table.
-		slot.table = slot.table.concat(source.table.slice(from, to));
-		if (slot.height > 0)
-		{
-			var len = slot.lengths.length;
-			for (var i = len; i < len + to - from; i++)
-			{
-				slot.lengths[i] = length(slot.table[i]);
-				slot.lengths[i] += (i > 0 ? slot.lengths[i - 1] : 0);
-			}
-		}
-
-		from += to;
-
-		// Only proceed to next slots[i] if the current one was
-		// fully copied.
-		if (source.table.length <= to)
-		{
-			read++; from = 0;
-		}
-
-		// Only create a new slot if the current one is filled up.
-		if (slot.table.length === M)
-		{
-			saveSlot(newA, newB, write, slot);
-			slot = createNode(a.height - 1, 0);
-			write++;
-		}
-	}
-
-	// Cleanup after the loop. Copy the last slot into the new nodes.
-	if (slot.table.length > 0)
-	{
-		saveSlot(newA, newB, write, slot);
-		write++;
-	}
-
-	// Shift the untouched slots to the left
-	while (read < a.table.length + b.table.length )
-	{
-		saveSlot(newA, newB, write, get2(a.table, b.table, read));
-		read++;
-		write++;
-	}
-
-	return [newA, newB];
-}
-
-// Navigation functions
-function botRight(a)
-{
-	return a.table[a.table.length - 1];
-}
-function botLeft(a)
-{
-	return a.table[0];
-}
-
-// Copies a node for updating. Note that you should not use this if
-// only updating only one of "table" or "lengths" for performance reasons.
-function nodeCopy(a)
-{
-	var newA = {
-		ctor: '_Array',
-		height: a.height,
-		table: a.table.slice()
-	};
-	if (a.height > 0)
-	{
-		newA.lengths = a.lengths.slice();
-	}
-	return newA;
-}
-
-// Returns how many items are in the tree.
-function length(array)
-{
-	if (array.height === 0)
-	{
-		return array.table.length;
-	}
-	else
-	{
-		return array.lengths[array.lengths.length - 1];
-	}
-}
-
-// Calculates in which slot of "table" the item probably is, then
-// find the exact slot via forward searching in  "lengths". Returns the index.
-function getSlot(i, a)
-{
-	var slot = i >> (5 * a.height);
-	while (a.lengths[slot] <= i)
-	{
-		slot++;
-	}
-	return slot;
-}
-
-// Recursively creates a tree with a given height containing
-// only the given item.
-function create(item, h)
-{
-	if (h === 0)
-	{
-		return {
-			ctor: '_Array',
-			height: 0,
-			table: [item]
-		};
-	}
-	return {
-		ctor: '_Array',
-		height: h,
-		table: [create(item, h - 1)],
-		lengths: [1]
-	};
-}
-
-// Recursively creates a tree that contains the given tree.
-function parentise(tree, h)
-{
-	if (h === tree.height)
-	{
-		return tree;
-	}
-
-	return {
-		ctor: '_Array',
-		height: h,
-		table: [parentise(tree, h - 1)],
-		lengths: [length(tree)]
-	};
-}
-
-// Emphasizes blood brotherhood beneath two trees.
-function siblise(a, b)
-{
-	return {
-		ctor: '_Array',
-		height: a.height + 1,
-		table: [a, b],
-		lengths: [length(a), length(a) + length(b)]
-	};
-}
-
-function toJSArray(a)
-{
-	var jsArray = new Array(length(a));
-	toJSArray_(jsArray, 0, a);
-	return jsArray;
-}
-
-function toJSArray_(jsArray, i, a)
-{
-	for (var t = 0; t < a.table.length; t++)
-	{
-		if (a.height === 0)
-		{
-			jsArray[i + t] = a.table[t];
-		}
-		else
-		{
-			var inc = t === 0 ? 0 : a.lengths[t - 1];
-			toJSArray_(jsArray, i + inc, a.table[t]);
-		}
-	}
-}
-
-function fromJSArray(jsArray)
-{
-	if (jsArray.length === 0)
-	{
-		return empty;
-	}
-	var h = Math.floor(Math.log(jsArray.length) / Math.log(M));
-	return fromJSArray_(jsArray, h, 0, jsArray.length);
-}
-
-function fromJSArray_(jsArray, h, from, to)
-{
-	if (h === 0)
-	{
-		return {
-			ctor: '_Array',
-			height: 0,
-			table: jsArray.slice(from, to)
-		};
-	}
-
-	var step = Math.pow(M, h);
-	var table = new Array(Math.ceil((to - from) / step));
-	var lengths = new Array(table.length);
-	for (var i = 0; i < table.length; i++)
-	{
-		table[i] = fromJSArray_(jsArray, h - 1, from + (i * step), Math.min(from + ((i + 1) * step), to));
-		lengths[i] = length(table[i]) + (i > 0 ? lengths[i - 1] : 0);
-	}
-	return {
-		ctor: '_Array',
-		height: h,
-		table: table,
-		lengths: lengths
-	};
-}
-
-return {
-	empty: empty,
-	fromList: fromList,
-	toList: toList,
-	initialize: F2(initialize),
-	append: F2(append),
-	push: F2(push),
-	slice: F3(slice),
-	get: F2(get),
-	set: F3(set),
-	map: F2(map),
-	indexedMap: F2(indexedMap),
-	foldl: F3(foldl),
-	foldr: F3(foldr),
-	length: length,
-
-	toJSArray: toJSArray,
-	fromJSArray: fromJSArray
-};
-
-}();var _elm_lang$core$Array$append = _elm_lang$core$Native_Array.append;
-var _elm_lang$core$Array$length = _elm_lang$core$Native_Array.length;
-var _elm_lang$core$Array$isEmpty = function (array) {
-	return _elm_lang$core$Native_Utils.eq(
-		_elm_lang$core$Array$length(array),
-		0);
-};
-var _elm_lang$core$Array$slice = _elm_lang$core$Native_Array.slice;
-var _elm_lang$core$Array$set = _elm_lang$core$Native_Array.set;
-var _elm_lang$core$Array$get = F2(
-	function (i, array) {
-		return ((_elm_lang$core$Native_Utils.cmp(0, i) < 1) && (_elm_lang$core$Native_Utils.cmp(
-			i,
-			_elm_lang$core$Native_Array.length(array)) < 0)) ? _elm_lang$core$Maybe$Just(
-			A2(_elm_lang$core$Native_Array.get, i, array)) : _elm_lang$core$Maybe$Nothing;
-	});
-var _elm_lang$core$Array$push = _elm_lang$core$Native_Array.push;
-var _elm_lang$core$Array$empty = _elm_lang$core$Native_Array.empty;
-var _elm_lang$core$Array$filter = F2(
-	function (isOkay, arr) {
-		var update = F2(
-			function (x, xs) {
-				return isOkay(x) ? A2(_elm_lang$core$Native_Array.push, x, xs) : xs;
-			});
-		return A3(_elm_lang$core$Native_Array.foldl, update, _elm_lang$core$Native_Array.empty, arr);
-	});
-var _elm_lang$core$Array$foldr = _elm_lang$core$Native_Array.foldr;
-var _elm_lang$core$Array$foldl = _elm_lang$core$Native_Array.foldl;
-var _elm_lang$core$Array$indexedMap = _elm_lang$core$Native_Array.indexedMap;
-var _elm_lang$core$Array$map = _elm_lang$core$Native_Array.map;
-var _elm_lang$core$Array$toIndexedList = function (array) {
-	return A3(
-		_elm_lang$core$List$map2,
-		F2(
-			function (v0, v1) {
-				return {ctor: '_Tuple2', _0: v0, _1: v1};
-			}),
-		_elm_lang$core$Native_List.range(
-			0,
-			_elm_lang$core$Native_Array.length(array) - 1),
-		_elm_lang$core$Native_Array.toList(array));
-};
-var _elm_lang$core$Array$toList = _elm_lang$core$Native_Array.toList;
-var _elm_lang$core$Array$fromList = _elm_lang$core$Native_Array.fromList;
-var _elm_lang$core$Array$initialize = _elm_lang$core$Native_Array.initialize;
-var _elm_lang$core$Array$repeat = F2(
-	function (n, e) {
-		return A2(
-			_elm_lang$core$Array$initialize,
-			n,
-			_elm_lang$core$Basics$always(e));
-	});
-var _elm_lang$core$Array$Array = {ctor: 'Array'};
 //import Maybe, Native.List, Native.Utils, Result //
 
 var _elm_lang$core$Native_String = function() {
@@ -7696,6 +6077,1621 @@ var _elm_lang$core$Dict$diff = F2(
 			t1,
 			t2);
 	});
+// eslint-disable-next-line no-unused-vars
+var _elm_community$elm_webgl$Native_WebGL = function () {
+
+  // setup logging
+  // eslint-disable-next-line no-unused-vars
+  function LOG(msg) {
+    // console.log(msg);
+  }
+
+  var Utils = _elm_lang$core$Native_Utils;
+
+  var rAF = typeof requestAnimationFrame !== 'undefined' ?
+    requestAnimationFrame :
+    function (cb) { setTimeout(cb, 1000 / 60); };
+
+  function unsafeCoerceGLSL(src) {
+    return { src: src };
+  }
+
+  function loadTexture(source) {
+    return _elm_lang$core$Native_Scheduler.nativeBinding(function (callback) {
+      var img = new Image();
+      img.onload = function () {
+        return callback(_elm_lang$core$Native_Scheduler.succeed({ ctor: 'Texture', img: img }));
+      };
+      img.onerror = function () {
+        return callback(_elm_lang$core$Native_Scheduler.fail({ ctor: 'Error' }));
+      };
+      img.crossOrigin = 'Anonymous';
+      img.src = source;
+    });
+  }
+
+  function loadTextureRaw(filter, source) {
+    return _elm_lang$core$Native_Scheduler.nativeBinding(function (callback) {
+      var img = new Image();
+      img.onload = function () {
+        return callback(_elm_lang$core$Native_Scheduler.succeed({ ctor: 'RawTexture', img: img }));
+      };
+      img.onerror = function () {
+        return callback(_elm_lang$core$Native_Scheduler.fail({ ctor: 'Error' }));
+      };
+      img.crossOrigin = 'Anonymous';
+      img.src = source;
+    });
+  }
+
+  function textureSize(texture) {
+    return Utils.Tuple2(texture.img.width, texture.img.height);
+  }
+
+  function render(vert, frag, buffer, uniforms, functionCalls) {
+
+    if (!buffer.guid) {
+      buffer.guid = Utils.guid();
+    }
+
+    return {
+      vert: vert,
+      frag: frag,
+      buffer: buffer,
+      uniforms: uniforms,
+      functionCalls: functionCalls
+    };
+
+  }
+
+  function do_texture(gl, texture) {
+
+    var tex = gl.createTexture();
+    LOG('Created texture');
+
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, texture.img);
+    switch (texture.ctor) {
+      case 'Texture':
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        break;
+      case 'RawTexture':
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+        break;
+    }
+    gl.generateMipmap(gl.TEXTURE_2D);
+    //gl.bindTexture(gl.TEXTURE0, null);
+    return tex;
+
+  }
+
+  function do_compile(gl, src, tipe) {
+
+    var shader = gl.createShader(tipe);
+    LOG('Created shader');
+
+    gl.shaderSource(shader, src);
+    gl.compileShader(shader);
+    var compile = gl.COMPILE_STATUS;
+    if (!gl.getShaderParameter(shader, compile)) {
+      throw gl.getShaderInfoLog(shader);
+    }
+
+    return shader;
+
+  }
+
+  function do_link(gl, vshader, fshader) {
+
+    var program = gl.createProgram();
+    LOG('Created program');
+
+    gl.attachShader(program, vshader);
+    gl.attachShader(program, fshader);
+    gl.linkProgram(program);
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+      throw gl.getProgramInfoLog(program);
+    }
+
+    return program;
+
+  }
+
+  function get_render_info(gl, render_type) {
+    switch (render_type) {
+      case 'Triangle':
+        return { mode: gl.TRIANGLES, elemSize: 3 };
+      case 'LineStrip':
+        return { mode: gl.LINE_STRIP, elemSize: 1 };
+      case 'LineLoop':
+        return { mode: gl.LINE_LOOP, elemSize: 1 };
+      case 'Points':
+        return { mode: gl.POINTS, elemSize: 1 };
+      case 'Lines':
+        return { mode: gl.LINES, elemSize: 2 };
+      case 'TriangleStrip':
+        return { mode: gl.TRIANGLE_STRIP, elemSize: 1 };
+      case 'TriangleFan':
+        return { mode: gl.TRIANGLE_FAN, elemSize: 1 };
+    }
+  }
+
+  function get_attribute_info(gl, type) {
+    switch (type) {
+      case gl.FLOAT:
+        return { size: 1, type: Float32Array, baseType: gl.FLOAT };
+      case gl.FLOAT_VEC2:
+        return { size: 2, type: Float32Array, baseType: gl.FLOAT };
+      case gl.FLOAT_VEC3:
+        return { size: 3, type: Float32Array, baseType: gl.FLOAT };
+      case gl.FLOAT_VEC4:
+        return { size: 4, type: Float32Array, baseType: gl.FLOAT };
+      case gl.INT:
+        return { size: 1, type: Int32Array, baseType: gl.INT };
+      case gl.INT_VEC2:
+        return { size: 2, type: Int32Array, baseType: gl.INT };
+      case gl.INT_VEC3:
+        return { size: 3, type: Int32Array, baseType: gl.INT };
+      case gl.INT_VEC4:
+        return { size: 4, type: Int32Array, baseType: gl.INT };
+    }
+  }
+
+  /**
+        Form the buffer for a given attribute.
+
+        @param gl gl context
+        @param attribute the attribute to bind to. We use its name to grab the record by name and also to know
+                how many elements we need to grab.
+        @param bufferElems The list coming in from elm.
+        @param elem_length The length of the number of vertices that complete one 'thing' based on the drawing mode.
+            ie, 2 for Lines, 3 for Triangles, etc.
+  */
+  function do_bind_attribute(gl, attribute, bufferElems, elem_length) {
+    var idxKeys = [];
+    for (var i = 0; i < elem_length; i++) {
+      idxKeys.push('_' + i);
+    }
+
+    function dataFill(data, cnt, fillOffset, elem, key) {
+      if (elem_length == 1) {
+        for (var i = 0; i < cnt; i++) {
+          data[fillOffset++] = cnt === 1 ? elem[key] : elem[key][i];
+        }
+      } else {
+        idxKeys.forEach(function (idx) {
+          for (var i = 0; i < cnt; i++) {
+            data[fillOffset++] = (cnt === 1 ? elem[idx][key] : elem[idx][key][i]);
+          }
+        });
+      }
+    }
+
+    var attributeInfo = get_attribute_info(gl, attribute.type);
+
+    if (attributeInfo === undefined) {
+      throw new Error('No info available for: ' + attribute.type);
+    }
+
+    var data_idx = 0;
+    var array = new attributeInfo.type( _elm_lang$core$List$length(bufferElems) * attributeInfo.size * elem_length);
+
+    A2(_elm_lang$core$List$map, function (elem) {
+      dataFill(array, attributeInfo.size, data_idx, elem, attribute.name);
+      data_idx += attributeInfo.size * elem_length;
+    }, bufferElems);
+
+    var buffer = gl.createBuffer();
+    LOG('Created attribute buffer ' + attribute.name);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+    gl.bufferData(gl.ARRAY_BUFFER, array, gl.STATIC_DRAW);
+    return buffer;
+  }
+
+  /**
+    This sets up the binding cacheing buffers.
+
+    We don't actually bind any buffers now except for the indices buffer, which we fill with 0..n. The problem
+    with filling the buffers here is that it is possible to have a buffer shared between two webgl shaders; which
+    could have different active attributes. If we bind it here against a particular program, we might not bind
+    them all. That final bind is now done right before drawing.
+
+    @param gl gl context
+    @param bufferElems The list coming in from elm.
+    @param elem_length The length of the number of vertices that complete one 'thing' based on the drawing mode.
+            ie, 2 for Lines, 3 for Triangles, etc.
+  */
+  function do_bind_setup(gl, bufferElems, elem_length) {
+    var buffers = {};
+
+    var numIndices = elem_length * _elm_lang$core$List$length(bufferElems);
+    var indices = new Uint16Array(numIndices);
+    for (var i = 0; i < numIndices; i += 1) {
+      indices[i] = i;
+    }
+    var indexBuffer = gl.createBuffer();
+    LOG('Created index buffer');
+
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indices, gl.STATIC_DRAW);
+
+    var bufferObject = {
+      numIndices: numIndices,
+      indexBuffer: indexBuffer,
+      buffers: buffers
+    };
+
+    return bufferObject;
+
+  }
+
+  function getProgID(vertID, fragID) {
+    return vertID + '#' + fragID;
+  }
+
+  function drawGL(domNode, data) {
+
+    var model = data.model;
+    var gl = model.cache.gl;
+
+    if (!gl) {
+      return domNode;
+    }
+
+    gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    LOG('Drawing');
+
+    function drawEntity(render) {
+      if (_elm_lang$core$List$length(render.buffer._0) === 0) {
+        return;
+      }
+
+      var progid;
+      var program;
+      if (render.vert.id && render.frag.id) {
+        progid = getProgID(render.vert.id, render.frag.id);
+        program = model.cache.programs[progid];
+      }
+
+      if (!program) {
+
+        var vshader;
+        if (render.vert.id) {
+          vshader = model.cache.shaders[render.vert.id];
+        } else {
+          render.vert.id = Utils.guid();
+        }
+
+        if (!vshader) {
+          vshader = do_compile(gl, render.vert.src, gl.VERTEX_SHADER);
+          model.cache.shaders[render.vert.id] = vshader;
+        }
+
+        var fshader;
+        if (render.frag.id) {
+          fshader = model.cache.shaders[render.frag.id];
+        } else {
+          render.frag.id = Utils.guid();
+        }
+
+        if (!fshader) {
+          fshader = do_compile(gl, render.frag.src, gl.FRAGMENT_SHADER);
+          model.cache.shaders[render.frag.id] = fshader;
+        }
+
+        program = do_link(gl, vshader, fshader);
+        progid = getProgID(render.vert.id, render.frag.id);
+        model.cache.programs[progid] = program;
+
+      }
+
+      gl.useProgram(program);
+
+      progid = progid || getProgID(render.vert.id, render.frag.id);
+      var setters = model.cache.uniformSetters[progid];
+      if (!setters) {
+        setters = createUniformSetters(gl, model, program);
+        model.cache.uniformSetters[progid] = setters;
+      }
+
+      setUniforms(setters, render.uniforms);
+
+      var renderType = get_render_info(gl, render.buffer.ctor);
+      var buffer = model.cache.buffers[render.buffer.guid];
+
+      if (!buffer) {
+        buffer = do_bind_setup(gl, render.buffer._0, renderType.elemSize);
+        model.cache.buffers[render.buffer.guid] = buffer;
+      }
+
+      var numIndices = buffer.numIndices;
+      var indexBuffer = buffer.indexBuffer;
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+
+      var numAttributes = gl.getProgramParameter(program, gl.ACTIVE_ATTRIBUTES);
+
+      for (var i = 0; i < numAttributes; i += 1) {
+        var attribute = gl.getActiveAttrib(program, i);
+
+        var attribLocation = gl.getAttribLocation(program, attribute.name);
+        gl.enableVertexAttribArray(attribLocation);
+
+        if (buffer.buffers[attribute.name] === undefined) {
+          buffer.buffers[attribute.name] = do_bind_attribute(gl, attribute, render.buffer._0, renderType.elemSize);
+        }
+        var attributeBuffer = buffer.buffers[attribute.name];
+        var attributeInfo = get_attribute_info(gl, attribute.type);
+
+        A2(_elm_lang$core$List$map, function (functionCall) {
+          functionCall(gl);
+        }, render.functionCalls);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, attributeBuffer);
+        gl.vertexAttribPointer(attribLocation, attributeInfo.size, attributeInfo.baseType, false, 0, 0);
+      }
+      gl.drawElements(renderType.mode, numIndices, gl.UNSIGNED_SHORT, 0);
+
+    }
+
+    A2(_elm_lang$core$List$map, drawEntity, model.renderables);
+    return domNode;
+  }
+
+  function createUniformSetters(gl, model, program) {
+
+    var textureCounter = 0;
+    function createUniformSetter(program, uniform) {
+      var uniformLocation = gl.getUniformLocation(program, uniform.name);
+      switch (uniform.type) {
+        case gl.INT:
+          return function (value) {
+            gl.uniform1i(uniformLocation, value);
+          };
+        case gl.FLOAT:
+          return function (value) {
+            gl.uniform1f(uniformLocation, value);
+          };
+        case gl.FLOAT_VEC2:
+          return function (value) {
+            gl.uniform2fv(uniformLocation, value);
+          };
+        case gl.FLOAT_VEC3:
+          return function (value) {
+            gl.uniform3fv(uniformLocation, value);
+          };
+        case gl.FLOAT_VEC4:
+          return function (value) {
+            gl.uniform4fv(uniformLocation, value);
+          };
+        case gl.FLOAT_MAT4:
+          return function (value) {
+            gl.uniformMatrix4fv(uniformLocation, false, value);
+          };
+        case gl.SAMPLER_2D:
+          var currentTexture = textureCounter;
+          var activeName = 'TEXTURE' + currentTexture;
+          textureCounter += 1;
+          return function (value) {
+            var texture = value;
+            var tex = undefined;
+            if (texture.id) {
+              tex = model.cache.textures[texture.id];
+            } else {
+              texture.id = Utils.guid();
+            }
+            if (!tex) {
+              tex = do_texture(gl, texture);
+              model.cache.textures[texture.id] = tex;
+            }
+            gl.activeTexture(gl[activeName]);
+            gl.bindTexture(gl.TEXTURE_2D, tex);
+            gl.uniform1i(uniformLocation, currentTexture);
+          };
+        default:
+          LOG('Unsupported uniform type: ' + uniform.type);
+          return function () {};
+      }
+    }
+
+    var uniformSetters = {};
+    var numUniforms = gl.getProgramParameter(program, gl.ACTIVE_UNIFORMS);
+    for (var i = 0; i < numUniforms; i += 1) {
+      var uniform = gl.getActiveUniform(program, i);
+      uniformSetters[uniform.name] = createUniformSetter(program, uniform);
+    }
+
+    return uniformSetters;
+  }
+
+  function setUniforms(setters, values) {
+    Object.keys(values).forEach(function (name) {
+      var setter = setters[name];
+      if (setter) {
+        setter(values[name]);
+      }
+    });
+  }
+
+  function enable(capability) {
+    return function (gl) {
+      gl.enable(gl[capability]);
+    };
+  }
+
+  function disable(capability) {
+    return function (gl) {
+      gl.disable(gl[capability]);
+    };
+  }
+
+  function blendColor(r, g, b, a) {
+    return function (gl) {
+      gl.blendColor(r, g, b, a);
+    };
+  }
+
+  function blendEquation(mode) {
+    return function (gl) {
+      gl.blendEquation(gl[mode]);
+    };
+  }
+
+  function blendEquationSeparate(modeRGB, modeAlpha) {
+    return function (gl) {
+      gl.blendEquationSeparate(gl[modeRGB], gl[modeAlpha]);
+    };
+  }
+
+  function blendFunc(src, dst) {
+    return function (gl) {
+      gl.blendFunc(gl[src], gl[dst]);
+    };
+  }
+
+  function depthFunc(mode) {
+    return function (gl) {
+      gl.depthFunc(gl[mode]);
+    };
+  }
+
+  function sampleCoverage(value, invert) {
+    return function (gl) {
+      gl.sampleCoverage(value, invert);
+    };
+  }
+
+  function stencilFunc(func, ref, mask) {
+    return function (gl) {
+      gl.stencilFunc(gl[func], ref, mask);
+    };
+  }
+
+  function stencilFuncSeparate(face, func, ref, mask) {
+    return function (gl) {
+      gl.stencilFuncSeparate(gl[face], gl[func], ref, mask);
+    };
+  }
+
+  function stencilOperation(fail, zfail, zpass) {
+    return function (gl) {
+      gl.stencilOp(gl[fail], gl[zfail], gl[zpass]);
+    };
+  }
+
+  function stencilOperationSeparate(face, fail, zfail, zpass) {
+    return function (gl) {
+      gl.stencilOpSeparate(gl[face], gl[fail], gl[zfail], gl[zpass]);
+    };
+  }
+
+
+  // VIRTUAL-DOM WIDGETS
+
+  function toHtml(functionCalls, factList, renderables) {
+    var model = {
+      functionCalls: functionCalls,
+      renderables: renderables,
+      cache: {}
+    };
+    return _elm_lang$virtual_dom$Native_VirtualDom.custom(factList, model, implementation);
+  }
+
+  // WIDGET IMPLEMENTATION
+  var implementation = {
+    render: renderCanvas,
+    diff: diff
+  };
+
+
+  function renderCanvas(model) {
+
+    LOG('Render canvas');
+    var canvas = document.createElement('canvas');
+    var gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+
+    if (gl) {
+      A2(_elm_lang$core$List$map, function (functionCall) {
+        functionCall(gl);
+      }, model.functionCalls);
+    } else {
+      canvas = document.createElement('div');
+      canvas.innerHTML = '<a href="http://get.webgl.org/">Enable WebGL</a> to see this content!';
+    }
+
+    model.cache = model.cache || {};
+    model.cache.gl = gl;
+    model.cache.shaders = [];
+    model.cache.programs = {};
+    model.cache.uniformSetters = {};
+    model.cache.buffers = [];
+    model.cache.textures = [];
+
+    // Render for the first time.
+    // This has to be done in animation frame,
+    // because the canvas is not in the DOM yet,
+    // when renderCanvas is called by virtual-dom
+    rAF(function () {
+      drawGL(canvas, {model: model});
+    });
+
+    return canvas;
+  }
+
+
+  function diff(oldModel, newModel) {
+    newModel.model.cache = oldModel.model.cache;
+    return {
+      applyPatch: drawGL,
+      data: newModel
+    };
+  }
+
+  return {
+    unsafeCoerceGLSL: unsafeCoerceGLSL,
+    textureSize: textureSize,
+    loadTexture: loadTexture,
+    render: F5(render),
+    toHtml: F3(toHtml),
+    enable: enable,
+    disable: disable,
+    blendColor: F4(blendColor),
+    blendEquation: blendEquation,
+    blendEquationSeparate: F2(blendEquationSeparate),
+    blendFunc: F2(blendFunc),
+    depthFunc: depthFunc,
+    sampleCoverage: F2(sampleCoverage),
+    stencilFunc: F3(stencilFunc),
+    stencilFuncSeparate: F4(stencilFuncSeparate),
+    stencilOperation: F3(stencilOperation),
+    stencilOperationSeparate: F4(stencilOperationSeparate),
+    loadTextureRaw: F2(loadTextureRaw)
+  };
+
+}();
+//import Native.List //
+
+var _elm_lang$core$Native_Array = function() {
+
+// A RRB-Tree has two distinct data types.
+// Leaf -> "height"  is always 0
+//         "table"   is an array of elements
+// Node -> "height"  is always greater than 0
+//         "table"   is an array of child nodes
+//         "lengths" is an array of accumulated lengths of the child nodes
+
+// M is the maximal table size. 32 seems fast. E is the allowed increase
+// of search steps when concatting to find an index. Lower values will
+// decrease balancing, but will increase search steps.
+var M = 32;
+var E = 2;
+
+// An empty array.
+var empty = {
+	ctor: '_Array',
+	height: 0,
+	table: []
+};
+
+
+function get(i, array)
+{
+	if (i < 0 || i >= length(array))
+	{
+		throw new Error(
+			'Index ' + i + ' is out of range. Check the length of ' +
+			'your array first or use getMaybe or getWithDefault.');
+	}
+	return unsafeGet(i, array);
+}
+
+
+function unsafeGet(i, array)
+{
+	for (var x = array.height; x > 0; x--)
+	{
+		var slot = i >> (x * 5);
+		while (array.lengths[slot] <= i)
+		{
+			slot++;
+		}
+		if (slot > 0)
+		{
+			i -= array.lengths[slot - 1];
+		}
+		array = array.table[slot];
+	}
+	return array.table[i];
+}
+
+
+// Sets the value at the index i. Only the nodes leading to i will get
+// copied and updated.
+function set(i, item, array)
+{
+	if (i < 0 || length(array) <= i)
+	{
+		return array;
+	}
+	return unsafeSet(i, item, array);
+}
+
+
+function unsafeSet(i, item, array)
+{
+	array = nodeCopy(array);
+
+	if (array.height === 0)
+	{
+		array.table[i] = item;
+	}
+	else
+	{
+		var slot = getSlot(i, array);
+		if (slot > 0)
+		{
+			i -= array.lengths[slot - 1];
+		}
+		array.table[slot] = unsafeSet(i, item, array.table[slot]);
+	}
+	return array;
+}
+
+
+function initialize(len, f)
+{
+	if (len <= 0)
+	{
+		return empty;
+	}
+	var h = Math.floor( Math.log(len) / Math.log(M) );
+	return initialize_(f, h, 0, len);
+}
+
+function initialize_(f, h, from, to)
+{
+	if (h === 0)
+	{
+		var table = new Array((to - from) % (M + 1));
+		for (var i = 0; i < table.length; i++)
+		{
+		  table[i] = f(from + i);
+		}
+		return {
+			ctor: '_Array',
+			height: 0,
+			table: table
+		};
+	}
+
+	var step = Math.pow(M, h);
+	var table = new Array(Math.ceil((to - from) / step));
+	var lengths = new Array(table.length);
+	for (var i = 0; i < table.length; i++)
+	{
+		table[i] = initialize_(f, h - 1, from + (i * step), Math.min(from + ((i + 1) * step), to));
+		lengths[i] = length(table[i]) + (i > 0 ? lengths[i-1] : 0);
+	}
+	return {
+		ctor: '_Array',
+		height: h,
+		table: table,
+		lengths: lengths
+	};
+}
+
+function fromList(list)
+{
+	if (list.ctor === '[]')
+	{
+		return empty;
+	}
+
+	// Allocate M sized blocks (table) and write list elements to it.
+	var table = new Array(M);
+	var nodes = [];
+	var i = 0;
+
+	while (list.ctor !== '[]')
+	{
+		table[i] = list._0;
+		list = list._1;
+		i++;
+
+		// table is full, so we can push a leaf containing it into the
+		// next node.
+		if (i === M)
+		{
+			var leaf = {
+				ctor: '_Array',
+				height: 0,
+				table: table
+			};
+			fromListPush(leaf, nodes);
+			table = new Array(M);
+			i = 0;
+		}
+	}
+
+	// Maybe there is something left on the table.
+	if (i > 0)
+	{
+		var leaf = {
+			ctor: '_Array',
+			height: 0,
+			table: table.splice(0, i)
+		};
+		fromListPush(leaf, nodes);
+	}
+
+	// Go through all of the nodes and eventually push them into higher nodes.
+	for (var h = 0; h < nodes.length - 1; h++)
+	{
+		if (nodes[h].table.length > 0)
+		{
+			fromListPush(nodes[h], nodes);
+		}
+	}
+
+	var head = nodes[nodes.length - 1];
+	if (head.height > 0 && head.table.length === 1)
+	{
+		return head.table[0];
+	}
+	else
+	{
+		return head;
+	}
+}
+
+// Push a node into a higher node as a child.
+function fromListPush(toPush, nodes)
+{
+	var h = toPush.height;
+
+	// Maybe the node on this height does not exist.
+	if (nodes.length === h)
+	{
+		var node = {
+			ctor: '_Array',
+			height: h + 1,
+			table: [],
+			lengths: []
+		};
+		nodes.push(node);
+	}
+
+	nodes[h].table.push(toPush);
+	var len = length(toPush);
+	if (nodes[h].lengths.length > 0)
+	{
+		len += nodes[h].lengths[nodes[h].lengths.length - 1];
+	}
+	nodes[h].lengths.push(len);
+
+	if (nodes[h].table.length === M)
+	{
+		fromListPush(nodes[h], nodes);
+		nodes[h] = {
+			ctor: '_Array',
+			height: h + 1,
+			table: [],
+			lengths: []
+		};
+	}
+}
+
+// Pushes an item via push_ to the bottom right of a tree.
+function push(item, a)
+{
+	var pushed = push_(item, a);
+	if (pushed !== null)
+	{
+		return pushed;
+	}
+
+	var newTree = create(item, a.height);
+	return siblise(a, newTree);
+}
+
+// Recursively tries to push an item to the bottom-right most
+// tree possible. If there is no space left for the item,
+// null will be returned.
+function push_(item, a)
+{
+	// Handle resursion stop at leaf level.
+	if (a.height === 0)
+	{
+		if (a.table.length < M)
+		{
+			var newA = {
+				ctor: '_Array',
+				height: 0,
+				table: a.table.slice()
+			};
+			newA.table.push(item);
+			return newA;
+		}
+		else
+		{
+		  return null;
+		}
+	}
+
+	// Recursively push
+	var pushed = push_(item, botRight(a));
+
+	// There was space in the bottom right tree, so the slot will
+	// be updated.
+	if (pushed !== null)
+	{
+		var newA = nodeCopy(a);
+		newA.table[newA.table.length - 1] = pushed;
+		newA.lengths[newA.lengths.length - 1]++;
+		return newA;
+	}
+
+	// When there was no space left, check if there is space left
+	// for a new slot with a tree which contains only the item
+	// at the bottom.
+	if (a.table.length < M)
+	{
+		var newSlot = create(item, a.height - 1);
+		var newA = nodeCopy(a);
+		newA.table.push(newSlot);
+		newA.lengths.push(newA.lengths[newA.lengths.length - 1] + length(newSlot));
+		return newA;
+	}
+	else
+	{
+		return null;
+	}
+}
+
+// Converts an array into a list of elements.
+function toList(a)
+{
+	return toList_(_elm_lang$core$Native_List.Nil, a);
+}
+
+function toList_(list, a)
+{
+	for (var i = a.table.length - 1; i >= 0; i--)
+	{
+		list =
+			a.height === 0
+				? _elm_lang$core$Native_List.Cons(a.table[i], list)
+				: toList_(list, a.table[i]);
+	}
+	return list;
+}
+
+// Maps a function over the elements of an array.
+function map(f, a)
+{
+	var newA = {
+		ctor: '_Array',
+		height: a.height,
+		table: new Array(a.table.length)
+	};
+	if (a.height > 0)
+	{
+		newA.lengths = a.lengths;
+	}
+	for (var i = 0; i < a.table.length; i++)
+	{
+		newA.table[i] =
+			a.height === 0
+				? f(a.table[i])
+				: map(f, a.table[i]);
+	}
+	return newA;
+}
+
+// Maps a function over the elements with their index as first argument.
+function indexedMap(f, a)
+{
+	return indexedMap_(f, a, 0);
+}
+
+function indexedMap_(f, a, from)
+{
+	var newA = {
+		ctor: '_Array',
+		height: a.height,
+		table: new Array(a.table.length)
+	};
+	if (a.height > 0)
+	{
+		newA.lengths = a.lengths;
+	}
+	for (var i = 0; i < a.table.length; i++)
+	{
+		newA.table[i] =
+			a.height === 0
+				? A2(f, from + i, a.table[i])
+				: indexedMap_(f, a.table[i], i == 0 ? from : from + a.lengths[i - 1]);
+	}
+	return newA;
+}
+
+function foldl(f, b, a)
+{
+	if (a.height === 0)
+	{
+		for (var i = 0; i < a.table.length; i++)
+		{
+			b = A2(f, a.table[i], b);
+		}
+	}
+	else
+	{
+		for (var i = 0; i < a.table.length; i++)
+		{
+			b = foldl(f, b, a.table[i]);
+		}
+	}
+	return b;
+}
+
+function foldr(f, b, a)
+{
+	if (a.height === 0)
+	{
+		for (var i = a.table.length; i--; )
+		{
+			b = A2(f, a.table[i], b);
+		}
+	}
+	else
+	{
+		for (var i = a.table.length; i--; )
+		{
+			b = foldr(f, b, a.table[i]);
+		}
+	}
+	return b;
+}
+
+// TODO: currently, it slices the right, then the left. This can be
+// optimized.
+function slice(from, to, a)
+{
+	if (from < 0)
+	{
+		from += length(a);
+	}
+	if (to < 0)
+	{
+		to += length(a);
+	}
+	return sliceLeft(from, sliceRight(to, a));
+}
+
+function sliceRight(to, a)
+{
+	if (to === length(a))
+	{
+		return a;
+	}
+
+	// Handle leaf level.
+	if (a.height === 0)
+	{
+		var newA = { ctor:'_Array', height:0 };
+		newA.table = a.table.slice(0, to);
+		return newA;
+	}
+
+	// Slice the right recursively.
+	var right = getSlot(to, a);
+	var sliced = sliceRight(to - (right > 0 ? a.lengths[right - 1] : 0), a.table[right]);
+
+	// Maybe the a node is not even needed, as sliced contains the whole slice.
+	if (right === 0)
+	{
+		return sliced;
+	}
+
+	// Create new node.
+	var newA = {
+		ctor: '_Array',
+		height: a.height,
+		table: a.table.slice(0, right),
+		lengths: a.lengths.slice(0, right)
+	};
+	if (sliced.table.length > 0)
+	{
+		newA.table[right] = sliced;
+		newA.lengths[right] = length(sliced) + (right > 0 ? newA.lengths[right - 1] : 0);
+	}
+	return newA;
+}
+
+function sliceLeft(from, a)
+{
+	if (from === 0)
+	{
+		return a;
+	}
+
+	// Handle leaf level.
+	if (a.height === 0)
+	{
+		var newA = { ctor:'_Array', height:0 };
+		newA.table = a.table.slice(from, a.table.length + 1);
+		return newA;
+	}
+
+	// Slice the left recursively.
+	var left = getSlot(from, a);
+	var sliced = sliceLeft(from - (left > 0 ? a.lengths[left - 1] : 0), a.table[left]);
+
+	// Maybe the a node is not even needed, as sliced contains the whole slice.
+	if (left === a.table.length - 1)
+	{
+		return sliced;
+	}
+
+	// Create new node.
+	var newA = {
+		ctor: '_Array',
+		height: a.height,
+		table: a.table.slice(left, a.table.length + 1),
+		lengths: new Array(a.table.length - left)
+	};
+	newA.table[0] = sliced;
+	var len = 0;
+	for (var i = 0; i < newA.table.length; i++)
+	{
+		len += length(newA.table[i]);
+		newA.lengths[i] = len;
+	}
+
+	return newA;
+}
+
+// Appends two trees.
+function append(a,b)
+{
+	if (a.table.length === 0)
+	{
+		return b;
+	}
+	if (b.table.length === 0)
+	{
+		return a;
+	}
+
+	var c = append_(a, b);
+
+	// Check if both nodes can be crunshed together.
+	if (c[0].table.length + c[1].table.length <= M)
+	{
+		if (c[0].table.length === 0)
+		{
+			return c[1];
+		}
+		if (c[1].table.length === 0)
+		{
+			return c[0];
+		}
+
+		// Adjust .table and .lengths
+		c[0].table = c[0].table.concat(c[1].table);
+		if (c[0].height > 0)
+		{
+			var len = length(c[0]);
+			for (var i = 0; i < c[1].lengths.length; i++)
+			{
+				c[1].lengths[i] += len;
+			}
+			c[0].lengths = c[0].lengths.concat(c[1].lengths);
+		}
+
+		return c[0];
+	}
+
+	if (c[0].height > 0)
+	{
+		var toRemove = calcToRemove(a, b);
+		if (toRemove > E)
+		{
+			c = shuffle(c[0], c[1], toRemove);
+		}
+	}
+
+	return siblise(c[0], c[1]);
+}
+
+// Returns an array of two nodes; right and left. One node _may_ be empty.
+function append_(a, b)
+{
+	if (a.height === 0 && b.height === 0)
+	{
+		return [a, b];
+	}
+
+	if (a.height !== 1 || b.height !== 1)
+	{
+		if (a.height === b.height)
+		{
+			a = nodeCopy(a);
+			b = nodeCopy(b);
+			var appended = append_(botRight(a), botLeft(b));
+
+			insertRight(a, appended[1]);
+			insertLeft(b, appended[0]);
+		}
+		else if (a.height > b.height)
+		{
+			a = nodeCopy(a);
+			var appended = append_(botRight(a), b);
+
+			insertRight(a, appended[0]);
+			b = parentise(appended[1], appended[1].height + 1);
+		}
+		else
+		{
+			b = nodeCopy(b);
+			var appended = append_(a, botLeft(b));
+
+			var left = appended[0].table.length === 0 ? 0 : 1;
+			var right = left === 0 ? 1 : 0;
+			insertLeft(b, appended[left]);
+			a = parentise(appended[right], appended[right].height + 1);
+		}
+	}
+
+	// Check if balancing is needed and return based on that.
+	if (a.table.length === 0 || b.table.length === 0)
+	{
+		return [a, b];
+	}
+
+	var toRemove = calcToRemove(a, b);
+	if (toRemove <= E)
+	{
+		return [a, b];
+	}
+	return shuffle(a, b, toRemove);
+}
+
+// Helperfunctions for append_. Replaces a child node at the side of the parent.
+function insertRight(parent, node)
+{
+	var index = parent.table.length - 1;
+	parent.table[index] = node;
+	parent.lengths[index] = length(node);
+	parent.lengths[index] += index > 0 ? parent.lengths[index - 1] : 0;
+}
+
+function insertLeft(parent, node)
+{
+	if (node.table.length > 0)
+	{
+		parent.table[0] = node;
+		parent.lengths[0] = length(node);
+
+		var len = length(parent.table[0]);
+		for (var i = 1; i < parent.lengths.length; i++)
+		{
+			len += length(parent.table[i]);
+			parent.lengths[i] = len;
+		}
+	}
+	else
+	{
+		parent.table.shift();
+		for (var i = 1; i < parent.lengths.length; i++)
+		{
+			parent.lengths[i] = parent.lengths[i] - parent.lengths[0];
+		}
+		parent.lengths.shift();
+	}
+}
+
+// Returns the extra search steps for E. Refer to the paper.
+function calcToRemove(a, b)
+{
+	var subLengths = 0;
+	for (var i = 0; i < a.table.length; i++)
+	{
+		subLengths += a.table[i].table.length;
+	}
+	for (var i = 0; i < b.table.length; i++)
+	{
+		subLengths += b.table[i].table.length;
+	}
+
+	var toRemove = a.table.length + b.table.length;
+	return toRemove - (Math.floor((subLengths - 1) / M) + 1);
+}
+
+// get2, set2 and saveSlot are helpers for accessing elements over two arrays.
+function get2(a, b, index)
+{
+	return index < a.length
+		? a[index]
+		: b[index - a.length];
+}
+
+function set2(a, b, index, value)
+{
+	if (index < a.length)
+	{
+		a[index] = value;
+	}
+	else
+	{
+		b[index - a.length] = value;
+	}
+}
+
+function saveSlot(a, b, index, slot)
+{
+	set2(a.table, b.table, index, slot);
+
+	var l = (index === 0 || index === a.lengths.length)
+		? 0
+		: get2(a.lengths, a.lengths, index - 1);
+
+	set2(a.lengths, b.lengths, index, l + length(slot));
+}
+
+// Creates a node or leaf with a given length at their arrays for perfomance.
+// Is only used by shuffle.
+function createNode(h, length)
+{
+	if (length < 0)
+	{
+		length = 0;
+	}
+	var a = {
+		ctor: '_Array',
+		height: h,
+		table: new Array(length)
+	};
+	if (h > 0)
+	{
+		a.lengths = new Array(length);
+	}
+	return a;
+}
+
+// Returns an array of two balanced nodes.
+function shuffle(a, b, toRemove)
+{
+	var newA = createNode(a.height, Math.min(M, a.table.length + b.table.length - toRemove));
+	var newB = createNode(a.height, newA.table.length - (a.table.length + b.table.length - toRemove));
+
+	// Skip the slots with size M. More precise: copy the slot references
+	// to the new node
+	var read = 0;
+	while (get2(a.table, b.table, read).table.length % M === 0)
+	{
+		set2(newA.table, newB.table, read, get2(a.table, b.table, read));
+		set2(newA.lengths, newB.lengths, read, get2(a.lengths, b.lengths, read));
+		read++;
+	}
+
+	// Pulling items from left to right, caching in a slot before writing
+	// it into the new nodes.
+	var write = read;
+	var slot = new createNode(a.height - 1, 0);
+	var from = 0;
+
+	// If the current slot is still containing data, then there will be at
+	// least one more write, so we do not break this loop yet.
+	while (read - write - (slot.table.length > 0 ? 1 : 0) < toRemove)
+	{
+		// Find out the max possible items for copying.
+		var source = get2(a.table, b.table, read);
+		var to = Math.min(M - slot.table.length, source.table.length);
+
+		// Copy and adjust size table.
+		slot.table = slot.table.concat(source.table.slice(from, to));
+		if (slot.height > 0)
+		{
+			var len = slot.lengths.length;
+			for (var i = len; i < len + to - from; i++)
+			{
+				slot.lengths[i] = length(slot.table[i]);
+				slot.lengths[i] += (i > 0 ? slot.lengths[i - 1] : 0);
+			}
+		}
+
+		from += to;
+
+		// Only proceed to next slots[i] if the current one was
+		// fully copied.
+		if (source.table.length <= to)
+		{
+			read++; from = 0;
+		}
+
+		// Only create a new slot if the current one is filled up.
+		if (slot.table.length === M)
+		{
+			saveSlot(newA, newB, write, slot);
+			slot = createNode(a.height - 1, 0);
+			write++;
+		}
+	}
+
+	// Cleanup after the loop. Copy the last slot into the new nodes.
+	if (slot.table.length > 0)
+	{
+		saveSlot(newA, newB, write, slot);
+		write++;
+	}
+
+	// Shift the untouched slots to the left
+	while (read < a.table.length + b.table.length )
+	{
+		saveSlot(newA, newB, write, get2(a.table, b.table, read));
+		read++;
+		write++;
+	}
+
+	return [newA, newB];
+}
+
+// Navigation functions
+function botRight(a)
+{
+	return a.table[a.table.length - 1];
+}
+function botLeft(a)
+{
+	return a.table[0];
+}
+
+// Copies a node for updating. Note that you should not use this if
+// only updating only one of "table" or "lengths" for performance reasons.
+function nodeCopy(a)
+{
+	var newA = {
+		ctor: '_Array',
+		height: a.height,
+		table: a.table.slice()
+	};
+	if (a.height > 0)
+	{
+		newA.lengths = a.lengths.slice();
+	}
+	return newA;
+}
+
+// Returns how many items are in the tree.
+function length(array)
+{
+	if (array.height === 0)
+	{
+		return array.table.length;
+	}
+	else
+	{
+		return array.lengths[array.lengths.length - 1];
+	}
+}
+
+// Calculates in which slot of "table" the item probably is, then
+// find the exact slot via forward searching in  "lengths". Returns the index.
+function getSlot(i, a)
+{
+	var slot = i >> (5 * a.height);
+	while (a.lengths[slot] <= i)
+	{
+		slot++;
+	}
+	return slot;
+}
+
+// Recursively creates a tree with a given height containing
+// only the given item.
+function create(item, h)
+{
+	if (h === 0)
+	{
+		return {
+			ctor: '_Array',
+			height: 0,
+			table: [item]
+		};
+	}
+	return {
+		ctor: '_Array',
+		height: h,
+		table: [create(item, h - 1)],
+		lengths: [1]
+	};
+}
+
+// Recursively creates a tree that contains the given tree.
+function parentise(tree, h)
+{
+	if (h === tree.height)
+	{
+		return tree;
+	}
+
+	return {
+		ctor: '_Array',
+		height: h,
+		table: [parentise(tree, h - 1)],
+		lengths: [length(tree)]
+	};
+}
+
+// Emphasizes blood brotherhood beneath two trees.
+function siblise(a, b)
+{
+	return {
+		ctor: '_Array',
+		height: a.height + 1,
+		table: [a, b],
+		lengths: [length(a), length(a) + length(b)]
+	};
+}
+
+function toJSArray(a)
+{
+	var jsArray = new Array(length(a));
+	toJSArray_(jsArray, 0, a);
+	return jsArray;
+}
+
+function toJSArray_(jsArray, i, a)
+{
+	for (var t = 0; t < a.table.length; t++)
+	{
+		if (a.height === 0)
+		{
+			jsArray[i + t] = a.table[t];
+		}
+		else
+		{
+			var inc = t === 0 ? 0 : a.lengths[t - 1];
+			toJSArray_(jsArray, i + inc, a.table[t]);
+		}
+	}
+}
+
+function fromJSArray(jsArray)
+{
+	if (jsArray.length === 0)
+	{
+		return empty;
+	}
+	var h = Math.floor(Math.log(jsArray.length) / Math.log(M));
+	return fromJSArray_(jsArray, h, 0, jsArray.length);
+}
+
+function fromJSArray_(jsArray, h, from, to)
+{
+	if (h === 0)
+	{
+		return {
+			ctor: '_Array',
+			height: 0,
+			table: jsArray.slice(from, to)
+		};
+	}
+
+	var step = Math.pow(M, h);
+	var table = new Array(Math.ceil((to - from) / step));
+	var lengths = new Array(table.length);
+	for (var i = 0; i < table.length; i++)
+	{
+		table[i] = fromJSArray_(jsArray, h - 1, from + (i * step), Math.min(from + ((i + 1) * step), to));
+		lengths[i] = length(table[i]) + (i > 0 ? lengths[i - 1] : 0);
+	}
+	return {
+		ctor: '_Array',
+		height: h,
+		table: table,
+		lengths: lengths
+	};
+}
+
+return {
+	empty: empty,
+	fromList: fromList,
+	toList: toList,
+	initialize: F2(initialize),
+	append: F2(append),
+	push: F2(push),
+	slice: F3(slice),
+	get: F2(get),
+	set: F3(set),
+	map: F2(map),
+	indexedMap: F2(indexedMap),
+	foldl: F3(foldl),
+	foldr: F3(foldr),
+	length: length,
+
+	toJSArray: toJSArray,
+	fromJSArray: fromJSArray
+};
+
+}();var _elm_lang$core$Array$append = _elm_lang$core$Native_Array.append;
+var _elm_lang$core$Array$length = _elm_lang$core$Native_Array.length;
+var _elm_lang$core$Array$isEmpty = function (array) {
+	return _elm_lang$core$Native_Utils.eq(
+		_elm_lang$core$Array$length(array),
+		0);
+};
+var _elm_lang$core$Array$slice = _elm_lang$core$Native_Array.slice;
+var _elm_lang$core$Array$set = _elm_lang$core$Native_Array.set;
+var _elm_lang$core$Array$get = F2(
+	function (i, array) {
+		return ((_elm_lang$core$Native_Utils.cmp(0, i) < 1) && (_elm_lang$core$Native_Utils.cmp(
+			i,
+			_elm_lang$core$Native_Array.length(array)) < 0)) ? _elm_lang$core$Maybe$Just(
+			A2(_elm_lang$core$Native_Array.get, i, array)) : _elm_lang$core$Maybe$Nothing;
+	});
+var _elm_lang$core$Array$push = _elm_lang$core$Native_Array.push;
+var _elm_lang$core$Array$empty = _elm_lang$core$Native_Array.empty;
+var _elm_lang$core$Array$filter = F2(
+	function (isOkay, arr) {
+		var update = F2(
+			function (x, xs) {
+				return isOkay(x) ? A2(_elm_lang$core$Native_Array.push, x, xs) : xs;
+			});
+		return A3(_elm_lang$core$Native_Array.foldl, update, _elm_lang$core$Native_Array.empty, arr);
+	});
+var _elm_lang$core$Array$foldr = _elm_lang$core$Native_Array.foldr;
+var _elm_lang$core$Array$foldl = _elm_lang$core$Native_Array.foldl;
+var _elm_lang$core$Array$indexedMap = _elm_lang$core$Native_Array.indexedMap;
+var _elm_lang$core$Array$map = _elm_lang$core$Native_Array.map;
+var _elm_lang$core$Array$toIndexedList = function (array) {
+	return A3(
+		_elm_lang$core$List$map2,
+		F2(
+			function (v0, v1) {
+				return {ctor: '_Tuple2', _0: v0, _1: v1};
+			}),
+		_elm_lang$core$Native_List.range(
+			0,
+			_elm_lang$core$Native_Array.length(array) - 1),
+		_elm_lang$core$Native_Array.toList(array));
+};
+var _elm_lang$core$Array$toList = _elm_lang$core$Native_Array.toList;
+var _elm_lang$core$Array$fromList = _elm_lang$core$Native_Array.fromList;
+var _elm_lang$core$Array$initialize = _elm_lang$core$Native_Array.initialize;
+var _elm_lang$core$Array$repeat = F2(
+	function (n, e) {
+		return A2(
+			_elm_lang$core$Array$initialize,
+			n,
+			_elm_lang$core$Basics$always(e));
+	});
+var _elm_lang$core$Array$Array = {ctor: 'Array'};
 //import Maybe, Native.Array, Native.List, Native.Utils, Result //
 
 var _elm_lang$core$Native_Json = function() {
