@@ -26,6 +26,7 @@ type alias Model =
   , keys : Keys
   , position: Vec3
   , facing: Vec3
+  , joggingPhase: Float
   , world: Drawable Vertex
   }
 
@@ -53,6 +54,7 @@ init =
   ( {texture = Nothing
   , position = vec3 0 0.5 1
   , facing = vec3 0 0 -1
+  , joggingPhase = 0
   , keys = Keys False False False False False False False False
   , world = Triangle []
   }
@@ -107,21 +109,6 @@ makeVertex coords =
 decodeWorld : String -> Task Http.Error (Drawable Vertex)
 decodeWorld source =
   succeed (Triangle (List.map makeTriangle (greedyGroupsOf 3 (extractMatches (filter5 (match (String.lines source)))))))
-  --[ ( { position = vec3 -1 1 0, coord = vec3 0 1 0 }
-  --  , { position = vec3 1 1 0, coord = vec3 1 1 0 }
-  --  , { position = vec3 -1 -1 0, coord = vec3 0 0 0 }
-  --  )])
-
--- decodeWorld : String -> Task Http.Error (Drawable { position:Vec3, coord:Vec3 })
--- decodeWorld source =
---     let
---         a = Debug.log "a" source
---     in
---        succeed (Triangle
---        [ ( { position = vec3 -1 1 0, coord = vec3 0 1 0 }
---          , { position = vec3 1 1 0, coord = vec3 1 1 0 }
---          , { position = vec3 -1 -1 0, coord = vec3 0 0 0 }
---          )])
 
 fetchTexture : Task Error (Maybe Texture)
 fetchTexture =
@@ -144,12 +131,23 @@ update action model =
     Animate dt ->
       ( { model
         | position = model.position
-          |> move (dt/500) model.keys model.facing
+          |> move (dt/500) model.keys model.facing model.joggingPhase
         , facing = model.facing
           |> rotateY dt model.keys
+        , joggingPhase = model.joggingPhase
+          |> updateJoggingPhase dt model.keys
         }
         , Cmd.none
       )
+
+updateJoggingPhase : Float -> {keys| a: Bool, s: Bool, w: Bool, d: Bool} -> Float -> Float
+updateJoggingPhase dt k phase =
+  case (k.a, k.s, k.d, k.w) of
+    (False, False, False, False) -> phase
+    (True, True, True, True) -> phase
+    (True, True, False, False) -> phase
+    (False, False, True, True) -> phase
+    _ -> phase + dt/100
 
 
 rotateY : Float -> {keys| left: Bool, right: Bool} -> Vec3 -> Vec3
@@ -163,8 +161,8 @@ rotateY dt k facing =
   in
      transform (makeRotate (direction * dt/1000) j) facing
 
-move : Float -> {keys| w: Bool, s: Bool, a: Bool, d: Bool} -> Vec3 -> Vec3 -> Vec3
-move dt k facing position =
+move : Float -> {keys| w: Bool, s: Bool, a: Bool, d: Bool} -> Vec3 -> Float -> Vec3-> Vec3
+move dt k facing joggingPhase position =
   let
     forward =
       case (k.w, k.s) of
@@ -173,11 +171,11 @@ move dt k facing position =
         _ -> 0
     strafe =
       case (k.a, k.d) of
-        (True, False) -> 1 * dt
-        (False, True) -> -1 * dt
+        (True, False) -> -1 * dt
+        (False, True) -> 1 * dt
         _ -> 0
   in
-     position `add` (Math.Vector3.scale strafe (facing `cross` j)) `add` (Math.Vector3.scale forward facing)
+     setY (0.5 + (sin joggingPhase) * 0.05) (position `add` (Math.Vector3.scale strafe (facing `cross` j)) `add` (Math.Vector3.scale forward facing) )
 
 
 main : Program Never
