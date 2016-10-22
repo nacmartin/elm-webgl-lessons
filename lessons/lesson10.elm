@@ -25,6 +25,7 @@ type alias Model =
   { texture : Maybe Texture
   , keys : Keys
   , position: Vec3
+  , facing: Vec3
   , world: Drawable Vertex
   }
 
@@ -43,13 +44,16 @@ type alias Keys =
   , down : Bool
   , w : Bool
   , s : Bool
+  , a : Bool
+  , d : Bool
   }
 
 init : (Model, Cmd Action)
 init =
   ( {texture = Nothing
-  , position = vec3 0 2 10
-  , keys = Keys False False False False False False
+  , position = vec3 0 0.5 1
+  , facing = vec3 0 0 -1
+  , keys = Keys False False False False False False False False
   , world = Triangle []
   }
   , Cmd.batch[ fetchTexture |> Task.perform TexturesError TexturesLoaded
@@ -140,33 +144,40 @@ update action model =
     Animate dt ->
       ( { model
         | position = model.position
-            |> move model.keys
+          |> move (dt/500) model.keys model.facing
+        , facing = model.facing
+          |> rotateY dt model.keys
         }
         , Cmd.none
       )
 
 
-rotateX : {keys| up: Bool, down: Bool} -> Float -> Float
-rotateX k velocity =
+rotateY : Float -> {keys| left: Bool, right: Bool} -> Vec3 -> Vec3
+rotateY dt k facing =
   let
     direction =
-      case (k.up, k.down) of
-        (True, False) -> 0.1
-        (False, True) -> -0.1
+      case (k.left, k.right) of
+        (True, False) -> 1
+        (False, True) -> -1
         _ -> 0
   in
-     velocity + direction
+     transform (makeRotate (direction * dt/1000) j) facing
 
-move : {keys| w: Bool, s: Bool} -> Vec3 -> Vec3
-move k position =
+move : Float -> {keys| w: Bool, s: Bool, a: Bool, d: Bool} -> Vec3 -> Vec3 -> Vec3
+move dt k facing position =
   let
-    direction =
+    forward =
       case (k.w, k.s) of
-        (True, False) -> 0.1
-        (False, True) -> -0.1
+        (True, False) -> 1 * dt
+        (False, True) -> -1 * dt
+        _ -> 0
+    strafe =
+      case (k.a, k.d) of
+        (True, False) -> 1 * dt
+        (False, True) -> -1 * dt
         _ -> 0
   in
-     position `add` (vec3 0 0 direction)
+     position `add` (Math.Vector3.scale strafe (facing `cross` j)) `add` (Math.Vector3.scale forward facing)
 
 
 main : Program Never
@@ -191,20 +202,24 @@ keyChange on keyCode =
   (case keyCode of
     38 -> \k -> {k | up = on}
     40 -> \k -> {k | down = on}
+    39 -> \k -> {k | right = on}
+    37 -> \k -> {k | left = on}
     87 -> \k -> {k | w = on}
     83 -> \k -> {k | s = on}
+    65 -> \k -> {k | a = on}
+    68 -> \k -> {k | d = on}
     _ -> Basics.identity
   ) |> KeyChange
 
 -- VIEW
 
 view : Model -> Html Action
-view {texture, world} =
+view { texture, world, position, facing } =
   div
     []
     [ WebGL.toHtml
         [ width 500, height 500, style [("backgroundColor", "black")]  ]
-        (renderEntity world texture)
+        ( renderEntity world texture position facing)
     , div
         [ style
             [ ("font-family", "monospace")
@@ -213,26 +228,26 @@ view {texture, world} =
             , ("top", "500px")
             ]
         ]
-        [ text message]
+        [ text message ]
     ]
 
 message : String
 message =
     "Up/Down rotate, w/s -> move camera in/out"
 
-renderEntity : Drawable { position:Vec3, coord:Vec3 } -> Maybe Texture -> List Renderable
-renderEntity world texture =
+renderEntity : Drawable { position:Vec3, coord:Vec3 } -> Maybe Texture -> Vec3 -> Vec3 -> List Renderable
+renderEntity world texture position facing =
   case texture of
     Nothing ->
      []
     Just tex ->
-     [render vertexShader fragmentShader world (uniforms tex)]
+     [render vertexShader fragmentShader world (uniforms tex position facing)]
 
-uniforms : Texture -> { texture:Texture, perspective:Mat4, camera:Mat4, worldSpace: Mat4 }
-uniforms texture =
+uniforms : Texture -> Vec3 -> Vec3 -> { texture:Texture, perspective:Mat4, camera:Mat4, worldSpace: Mat4 }
+uniforms texture position facing =
   { texture = texture
-  , worldSpace = makeTranslate (vec3 0 -0.5 1)
-  , camera = makeLookAt (vec3 0 0 -4) (vec3 0 0 -1) (vec3 0 1 0)
+  , worldSpace = makeTranslate (vec3 0 0 0)
+  , camera = makeLookAt position (position `add` facing) j
   , perspective = makePerspective 45 1 0.01 100
   }
 
