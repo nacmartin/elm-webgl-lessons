@@ -1,5 +1,5 @@
 import Debug
-import Keyboard
+import Mouse
 import String exposing (toFloat)
 import Math.Vector2 exposing (Vec2)
 import Math.Vector3 exposing (..)
@@ -10,24 +10,29 @@ import WebGL exposing (..)
 import Html exposing (Html, text, div, input, h2)
 import Html.App as Html
 import Html.Events exposing (onInput, onClick)
-import AnimationFrame
 import Html.Attributes exposing (width, height, style, type', checked, step, value)
 
 type alias Model =
   { texture : Maybe Texture
+  , position: Vec3
+  , lighting: Bool
   , thetaX : Float
   , thetaY : Float
-  , keys : Keys
-  , position: Vec3
-  , rx: Float
-  , ry: Float
-  , lighting: Bool
+  , mouseStatus : MouseStatus
   , directionalColourText: {x:String, y:String, z:String}
   , directionalColour: Vec3
   , ambientColourText: {x:String, y:String, z:String}
   , ambientColour: Vec3
   , directionalText: {x:String, y:String, z:String}
   , directional: Vec3
+  }
+
+type alias MouseStatus =
+  { pressed : Bool
+  , x1 : Int
+  , y1 : Int
+  , x2 : Int
+  , y2 : Int
   }
 
 type alias Triplet =
@@ -39,9 +44,7 @@ type alias Triplet =
 type Action
   = TexturesError Error
   | TexturesLoaded (Maybe Texture)
-  | TextureChange (Model -> Model)
-  | KeyChange (Keys -> Keys)
-  | Animate Time
+  | MouseChange (Model -> Model)
   | UseLighting
   | ChangeDirectionalColourR String
   | ChangeDirectionalColourG String
@@ -53,25 +56,14 @@ type Action
   | ChangeDirectionalY String
   | ChangeDirectionalZ String
 
-type alias Keys =
-  { left : Bool
-  , right : Bool
-  , up : Bool
-  , down : Bool
-  , w : Bool
-  , s : Bool
-  }
-
 init : (Model, Cmd Action)
 init =
   ( {texture = Nothing
   , thetaX = 0
   , thetaY = 0
-  , rx = 0
-  , ry = 0
-  , keys = Keys False False False False False False
   , position = (vec3 0 0 -4)
   , lighting = True
+  , mouseStatus = MouseStatus False 0 0 0 0
   , directionalColourText = {x="1", y="1", z="1"}
   , directionalColour = (vec3 1 1 1)
   , ambientColourText = {x="0.2", y="0.2", z="0.2"}
@@ -94,23 +86,8 @@ update action model =
       (model, Cmd.none)
     TexturesLoaded texture ->
       ({model | texture = texture}, Cmd.none)
-    TextureChange keyfunc ->
-      ((keyfunc model), Cmd.none)
-    KeyChange keyfunc ->
-      ({model | keys = keyfunc model.keys}, Cmd.none)
-    Animate dt ->
-      ( { model
-        | thetaX = model.thetaX + model.rx * dt / 1000
-        , thetaY = model.thetaY + model.ry * dt / 1000
-        , position = model.position
-            |> move model.keys
-        , rx = model.rx
-            |> rotateX model.keys
-        , ry = model.ry
-            |> rotateY model.keys
-        }
-        , Cmd.none
-      )
+    MouseChange mousefunc ->
+      (mousefunc model, Cmd.none )
     UseLighting ->
         ( { model | lighting = not model.lighting }, Cmd.none )
     ChangeDirectionalX value ->
@@ -159,6 +136,18 @@ update action model =
         in
            ( { model | ambientColour = numeric, ambientColourText = textual }, Cmd.none )
 
+rotateX : MouseStatus -> Float -> Float
+rotateX m thetaX =
+  case m.pressed of
+    True -> thetaX + degrees(Basics.toFloat(m.x2 - m.x1))
+    False -> thetaX
+
+rotateY : MouseStatus -> Float -> Float
+rotateY m thetaY =
+  case m.pressed of
+    True -> thetaY + degrees(Basics.toFloat(m.y2 - m.y1))
+    False -> thetaY
+
 updateAndParseX:  Vec3 -> Triplet -> String -> (Vec3, Triplet)
 updateAndParseX default textual value =
   let text = { textual | x = value }
@@ -183,40 +172,6 @@ updateAndParse default text =
       (Ok vr, Ok vg, Ok vb) -> (vec3 vr vg vb, text)
       _ -> ( default, text )
 
-rotateX : {keys| right: Bool, left: Bool} -> Float -> Float
-rotateX k velocity =
-  let
-    direction =
-      case (k.right, k.left) of
-        (True, False) -> 0.1
-        (False, True) -> -0.1
-        _ -> 0
-  in
-     velocity + direction
-
-rotateY : {keys| up: Bool, down: Bool} -> Float -> Float
-rotateY k velocity =
-  let
-    direction =
-      case (k.up, k.down) of
-        (True, False) -> 0.1
-        (False, True) -> -0.1
-        _ -> 0
-  in
-     velocity + direction
-
-move : {keys| w: Bool, s: Bool} -> Vec3 -> Vec3
-move k position =
-  let
-    direction =
-      case (k.w, k.s) of
-        (True, False) -> 0.1
-        (False, True) -> -0.1
-        _ -> 0
-  in
-     position `add` (vec3 0 0 direction)
-
-
 main : Program Never
 main =
   Html.program
@@ -228,23 +183,39 @@ main =
 
 subscriptions : Model -> Sub Action
 subscriptions _ =
-  [ AnimationFrame.diffs Animate
-  , Keyboard.downs (keyChange True)
-  , Keyboard.ups (keyChange False)
+  [ Mouse.downs mouseDown
+  , Mouse.ups mouseUp
+  , Mouse.moves mouseMove
   ]
   |> Sub.batch
 
-keyChange : Bool -> Keyboard.KeyCode -> Action
-keyChange on keyCode =
-  (case keyCode of
-    37 -> \k -> {k | left = on}
-    39 -> \k -> {k | right = on}
-    38 -> \k -> {k | up = on}
-    40 -> \k -> {k | down = on}
-    87 -> \k -> {k | w = on}
-    83 -> \k -> {k | s = on}
-    _ -> Basics.identity
-  ) |> KeyChange
+mouseDown : Mouse.Position -> Action
+mouseDown {x, y} =
+  let
+    changeMouseStatus = (\x y ms -> {ms| x1 = x, y1 = y, x2 = x, y2 = y, pressed = True})
+  in
+    MouseChange (\m -> { m| mouseStatus = changeMouseStatus x y m.mouseStatus })
+
+mouseMove : Mouse.Position -> Action
+mouseMove {x, y} =
+  let
+    changeMouseStatus = (\x y ms -> {ms| x1 = x, y1 = y, x2 = x, y2 = y, pressed = True})
+  in
+    MouseChange (\m ->
+        case m.mouseStatus.pressed of
+            False -> m
+            True -> { m
+                        | mouseStatus = changeMouseStatus x y m.mouseStatus
+                        , thetaX = m.thetaX + degrees (Basics.toFloat(x - m.mouseStatus.x1))
+                        , thetaY = m.thetaY + degrees (Basics.toFloat(y - m.mouseStatus.y1))
+                        })
+
+mouseUp : Mouse.Position -> Action
+mouseUp {x, y} =
+  let
+    changeMouseStatus = (\ms -> {ms| pressed = False})
+  in
+  MouseChange (\m -> { m| mouseStatus = changeMouseStatus m.mouseStatus})
 
 -- MESHES
 
@@ -285,7 +256,7 @@ face latitude1 latitude2 longitude1 longitude2 radius =
 -- VIEW
 
 view : Model -> Html Action
-view {texture, thetaX, thetaY, position, rx, ry, lighting, directionalColour, directional, ambientColour, directionalColourText, ambientColourText, directionalText} =
+view {texture, thetaX, thetaY, position, lighting, directionalColour, directional, ambientColour, directionalColourText, ambientColourText, directionalText} =
   let
     entities = renderEntity sphere thetaX thetaY texture position lighting directionalColour directional ambientColour
   in
@@ -342,7 +313,7 @@ view {texture, thetaX, thetaY, position, rx, ry, lighting, directionalColour, di
 
 message : String
 message =
-    "Keys are: Right/Left/Up/Down rotate, w/s -> move camera in/out"
+    "Move the Moon dragging the mouse"
 
 
 renderEntity : Drawable { position:Vec3, coord:Vec3, norm: Vec3 } -> Float -> Float -> Maybe Texture -> Vec3 -> Bool -> Vec3 -> Vec3 -> Vec3 -> List Renderable
