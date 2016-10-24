@@ -76,7 +76,7 @@ init =
 
 fetchTextures : Task Error (Maybe Texture)
 fetchTextures =
-  loadTextureWithFilter WebGL.Nearest "textures/moon.gif" `Task.andThen` \nearestTexture ->
+  loadTexture "textures/moon.gif" `Task.andThen` \nearestTexture ->
   Task.succeed (Just nearestTexture)
 
 update : Action -> Model -> (Model, Cmd Action)

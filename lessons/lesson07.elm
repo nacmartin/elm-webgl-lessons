@@ -361,7 +361,7 @@ uniformsCube tx ty texture displacement lighting directionalColour directional a
     , worldSpace = worldSpace
     , perspective = perspective
     , camera = camera
-    , normalMatrix = transpose(inverseOrthonormal( worldSpace `mul` camera))
+    , normalMatrix = transpose(inverseOrthonormal( worldSpace))
     , lighting = lighting
     , directionalColour = directionalColour
     , ambientColour = ambientColour
@@ -399,7 +399,7 @@ vertexShader = [glsl|
       lightWeighting = vec3(1.0, 1.0, 1.0);
     } else {
       vec4 transformedNormal = normalMatrix * vec4(norm, 0.0);
-      float directionalLightWeighting = max(dot(transformedNormal, vec4(directional, 0)), 0.0);
+      float directionalLightWeighting = max(dot(transformedNormal, vec4(normalize(directional), 0)), 0.0);
       lightWeighting = ambientColour + directionalColour * directionalLightWeighting;
     }
   }
