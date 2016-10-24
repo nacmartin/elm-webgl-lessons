@@ -184,7 +184,7 @@ subscriptions _ =
 
 -- MESHES
 
-numSegments = 8
+numSegments = 20
 
 sphere : Drawable { position:Vec3, coord:Vec3, norm:Vec3 }
 sphere =
