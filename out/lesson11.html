@@ -11960,7 +11960,7 @@ var _user$project$Main$update = F2(
 	});
 var _user$project$Main$fetchTextures = A2(
 	_elm_lang$core$Task$andThen,
-	A2(_elm_community$elm_webgl$WebGL$loadTextureWithFilter, _elm_community$elm_webgl$WebGL$Nearest, 'textures/moon.gif'),
+	_elm_community$elm_webgl$WebGL$loadTexture('textures/moon.gif'),
 	function (nearestTexture) {
 		return _elm_lang$core$Task$succeed(
 			_elm_lang$core$Maybe$Just(nearestTexture));

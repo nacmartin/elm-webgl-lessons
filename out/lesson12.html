@@ -11613,7 +11613,7 @@ var _elm_lang$html$Html_Events$Options = F2(
 	function (a, b) {
 		return {stopPropagation: a, preventDefault: b};
 	});
-var _elm_lang$keyboard$Keyboard$onSelfMsg = F3(
+var _elm_lang$mouse$Mouse$onSelfMsg = F3(
 	function (router, _p0, state) {
 		var _p1 = _p0;
 		var _p2 = A2(_elm_lang$core$Dict$get, _p1.category, state);
@@ -11624,7 +11624,7 @@ var _elm_lang$keyboard$Keyboard$onSelfMsg = F3(
 				return A2(
 					_elm_lang$core$Platform$sendToApp,
 					router,
-					tagger(_p1.keyCode));
+					tagger(_p1.position));
 			};
 			return A2(
 				_elm_lang$core$Task$andThen,
@@ -11635,8 +11635,8 @@ var _elm_lang$keyboard$Keyboard$onSelfMsg = F3(
 				});
 		}
 	});
-var _elm_lang$keyboard$Keyboard_ops = _elm_lang$keyboard$Keyboard_ops || {};
-_elm_lang$keyboard$Keyboard_ops['&>'] = F2(
+var _elm_lang$mouse$Mouse_ops = _elm_lang$mouse$Mouse_ops || {};
+_elm_lang$mouse$Mouse_ops['&>'] = F2(
 	function (t1, t2) {
 		return A2(
 			_elm_lang$core$Task$andThen,
@@ -11645,8 +11645,8 @@ _elm_lang$keyboard$Keyboard_ops['&>'] = F2(
 				return t2;
 			});
 	});
-var _elm_lang$keyboard$Keyboard$init = _elm_lang$core$Task$succeed(_elm_lang$core$Dict$empty);
-var _elm_lang$keyboard$Keyboard$categorizeHelpHelp = F2(
+var _elm_lang$mouse$Mouse$init = _elm_lang$core$Task$succeed(_elm_lang$core$Dict$empty);
+var _elm_lang$mouse$Mouse$categorizeHelpHelp = F2(
 	function (value, maybeValues) {
 		var _p5 = maybeValues;
 		if (_p5.ctor === 'Nothing') {
@@ -11658,7 +11658,7 @@ var _elm_lang$keyboard$Keyboard$categorizeHelpHelp = F2(
 				A2(_elm_lang$core$List_ops['::'], value, _p5._0));
 		}
 	});
-var _elm_lang$keyboard$Keyboard$categorizeHelp = F2(
+var _elm_lang$mouse$Mouse$categorizeHelp = F2(
 	function (subs, subDict) {
 		categorizeHelp:
 		while (true) {
@@ -11670,7 +11670,7 @@ var _elm_lang$keyboard$Keyboard$categorizeHelp = F2(
 					_v5 = A3(
 					_elm_lang$core$Dict$update,
 					_p6._0._0,
-					_elm_lang$keyboard$Keyboard$categorizeHelpHelp(_p6._0._1),
+					_elm_lang$mouse$Mouse$categorizeHelpHelp(_p6._0._1),
 					subDict);
 				subs = _v4;
 				subDict = _v5;
@@ -11678,20 +11678,28 @@ var _elm_lang$keyboard$Keyboard$categorizeHelp = F2(
 			}
 		}
 	});
-var _elm_lang$keyboard$Keyboard$categorize = function (subs) {
-	return A2(_elm_lang$keyboard$Keyboard$categorizeHelp, subs, _elm_lang$core$Dict$empty);
+var _elm_lang$mouse$Mouse$categorize = function (subs) {
+	return A2(_elm_lang$mouse$Mouse$categorizeHelp, subs, _elm_lang$core$Dict$empty);
 };
-var _elm_lang$keyboard$Keyboard$keyCode = A2(_elm_lang$core$Json_Decode_ops[':='], 'keyCode', _elm_lang$core$Json_Decode$int);
-var _elm_lang$keyboard$Keyboard$subscription = _elm_lang$core$Native_Platform.leaf('Keyboard');
-var _elm_lang$keyboard$Keyboard$Watcher = F2(
+var _elm_lang$mouse$Mouse$subscription = _elm_lang$core$Native_Platform.leaf('Mouse');
+var _elm_lang$mouse$Mouse$Position = F2(
+	function (a, b) {
+		return {x: a, y: b};
+	});
+var _elm_lang$mouse$Mouse$position = A3(
+	_elm_lang$core$Json_Decode$object2,
+	_elm_lang$mouse$Mouse$Position,
+	A2(_elm_lang$core$Json_Decode_ops[':='], 'pageX', _elm_lang$core$Json_Decode$int),
+	A2(_elm_lang$core$Json_Decode_ops[':='], 'pageY', _elm_lang$core$Json_Decode$int));
+var _elm_lang$mouse$Mouse$Watcher = F2(
 	function (a, b) {
 		return {taggers: a, pid: b};
 	});
-var _elm_lang$keyboard$Keyboard$Msg = F2(
+var _elm_lang$mouse$Mouse$Msg = F2(
 	function (a, b) {
-		return {category: a, keyCode: b};
+		return {category: a, position: b};
 	});
-var _elm_lang$keyboard$Keyboard$onEffects = F3(
+var _elm_lang$mouse$Mouse$onEffects = F3(
 	function (router, newSubs, oldState) {
 		var rightStep = F3(
 			function (category, taggers, task) {
@@ -11705,19 +11713,19 @@ var _elm_lang$keyboard$Keyboard$onEffects = F3(
 								A3(
 									_elm_lang$dom$Dom_LowLevel$onDocument,
 									category,
-									_elm_lang$keyboard$Keyboard$keyCode,
+									_elm_lang$mouse$Mouse$position,
 									function (_p7) {
 										return A2(
 											_elm_lang$core$Platform$sendToSelf,
 											router,
-											A2(_elm_lang$keyboard$Keyboard$Msg, category, _p7));
+											A2(_elm_lang$mouse$Mouse$Msg, category, _p7));
 									})),
 							function (pid) {
 								return _elm_lang$core$Task$succeed(
 									A3(
 										_elm_lang$core$Dict$insert,
 										category,
-										A2(_elm_lang$keyboard$Keyboard$Watcher, taggers, pid),
+										A2(_elm_lang$mouse$Mouse$Watcher, taggers, pid),
 										state));
 							});
 					});
@@ -11733,7 +11741,7 @@ var _elm_lang$keyboard$Keyboard$onEffects = F3(
 							A3(
 								_elm_lang$core$Dict$insert,
 								category,
-								A2(_elm_lang$keyboard$Keyboard$Watcher, taggers, _p9.pid),
+								A2(_elm_lang$mouse$Mouse$Watcher, taggers, _p9.pid),
 								state));
 					});
 			});
@@ -11741,7 +11749,7 @@ var _elm_lang$keyboard$Keyboard$onEffects = F3(
 			function (category, _p10, task) {
 				var _p11 = _p10;
 				return A2(
-					_elm_lang$keyboard$Keyboard_ops['&>'],
+					_elm_lang$mouse$Mouse_ops['&>'],
 					_elm_lang$core$Process$kill(_p11.pid),
 					task);
 			});
@@ -11751,56 +11759,58 @@ var _elm_lang$keyboard$Keyboard$onEffects = F3(
 			bothStep,
 			rightStep,
 			oldState,
-			_elm_lang$keyboard$Keyboard$categorize(newSubs),
+			_elm_lang$mouse$Mouse$categorize(newSubs),
 			_elm_lang$core$Task$succeed(_elm_lang$core$Dict$empty));
 	});
-var _elm_lang$keyboard$Keyboard$MySub = F2(
+var _elm_lang$mouse$Mouse$MySub = F2(
 	function (a, b) {
 		return {ctor: 'MySub', _0: a, _1: b};
 	});
-var _elm_lang$keyboard$Keyboard$presses = function (tagger) {
-	return _elm_lang$keyboard$Keyboard$subscription(
-		A2(_elm_lang$keyboard$Keyboard$MySub, 'keypress', tagger));
+var _elm_lang$mouse$Mouse$clicks = function (tagger) {
+	return _elm_lang$mouse$Mouse$subscription(
+		A2(_elm_lang$mouse$Mouse$MySub, 'click', tagger));
 };
-var _elm_lang$keyboard$Keyboard$downs = function (tagger) {
-	return _elm_lang$keyboard$Keyboard$subscription(
-		A2(_elm_lang$keyboard$Keyboard$MySub, 'keydown', tagger));
+var _elm_lang$mouse$Mouse$moves = function (tagger) {
+	return _elm_lang$mouse$Mouse$subscription(
+		A2(_elm_lang$mouse$Mouse$MySub, 'mousemove', tagger));
 };
-var _elm_lang$keyboard$Keyboard$ups = function (tagger) {
-	return _elm_lang$keyboard$Keyboard$subscription(
-		A2(_elm_lang$keyboard$Keyboard$MySub, 'keyup', tagger));
+var _elm_lang$mouse$Mouse$downs = function (tagger) {
+	return _elm_lang$mouse$Mouse$subscription(
+		A2(_elm_lang$mouse$Mouse$MySub, 'mousedown', tagger));
 };
-var _elm_lang$keyboard$Keyboard$subMap = F2(
+var _elm_lang$mouse$Mouse$ups = function (tagger) {
+	return _elm_lang$mouse$Mouse$subscription(
+		A2(_elm_lang$mouse$Mouse$MySub, 'mouseup', tagger));
+};
+var _elm_lang$mouse$Mouse$subMap = F2(
 	function (func, _p12) {
 		var _p13 = _p12;
 		return A2(
-			_elm_lang$keyboard$Keyboard$MySub,
+			_elm_lang$mouse$Mouse$MySub,
 			_p13._0,
 			function (_p14) {
 				return func(
 					_p13._1(_p14));
 			});
 	});
-_elm_lang$core$Native_Platform.effectManagers['Keyboard'] = {pkg: 'elm-lang/keyboard', init: _elm_lang$keyboard$Keyboard$init, onEffects: _elm_lang$keyboard$Keyboard$onEffects, onSelfMsg: _elm_lang$keyboard$Keyboard$onSelfMsg, tag: 'sub', subMap: _elm_lang$keyboard$Keyboard$subMap};
+_elm_lang$core$Native_Platform.effectManagers['Mouse'] = {pkg: 'elm-lang/mouse', init: _elm_lang$mouse$Mouse$init, onEffects: _elm_lang$mouse$Mouse$onEffects, onSelfMsg: _elm_lang$mouse$Mouse$onSelfMsg, tag: 'sub', subMap: _elm_lang$mouse$Mouse$subMap};
 var _user$project$Main$fragmentShader = {'src': '\n  precision mediump float;\n\n  uniform sampler2D texture;\n  varying vec2 vcoord;\n  varying vec3 lightWeighting;\n\n  void main () {\n      vec4 textureColor = texture2D(texture, vec2(vcoord.s, vcoord.t));\n      gl_FragColor = vec4(textureColor.rgb * lightWeighting, textureColor.a);\n  }\n\n'};
-var _user$project$Main$vertexShader = {'src': '\n\n  precision mediump float;\n\n  attribute vec3 position;\n  attribute vec3 coord;\n  attribute vec3 norm;\n\n  uniform mat4 worldSpace;\n  uniform mat4 perspective;\n  uniform mat4 normalMatrix;\n  uniform mat4 camera;\n  uniform bool lighting;\n  uniform vec3 directionalColour;\n  uniform vec3 directional;\n  uniform vec3 ambientColour;\n\n  varying vec2 vcoord;\n  varying vec3 lightWeighting;\n\n  void main() {\n    gl_Position = perspective * camera * worldSpace * vec4(position, 1.0);\n    vcoord = coord.xy;\n\n    if (!lighting) {\n      lightWeighting = vec3(1.0, 1.0, 1.0);\n    } else {\n      vec4 transformedNormal = normalMatrix * vec4(norm, 0.0);\n      float directionalLightWeighting = max(dot(transformedNormal, vec4(normalize(directional), 0)), 0.0);\n      lightWeighting = ambientColour + directionalColour * directionalLightWeighting;\n    }\n  }\n'};
-var _user$project$Main$uniformsCube = F8(
-	function (tx, ty, texture, displacement, lighting, directionalColour, directional, ambientColour) {
+var _user$project$Main$vertexShader = {'src': '\n\n  precision mediump float;\n\n  attribute vec3 position;\n  attribute vec3 coord;\n  attribute vec3 norm;\n\n  uniform mat4 worldSpace;\n  uniform mat4 perspective;\n  uniform mat4 normalMatrix;\n  uniform mat4 camera;\n  uniform bool lighting;\n  uniform vec3 pointColour;\n  uniform vec3 point;\n  uniform vec3 ambientColour;\n\n  varying vec2 vcoord;\n  varying vec3 lightWeighting;\n\n  void main() {\n    vec4 mvPosition =  worldSpace * vec4(position, 1.0);\n    gl_Position = perspective * camera * mvPosition;\n    vcoord = coord.xy;\n\n    if (!lighting) {\n      lightWeighting = vec3(1.0, 1.0, 1.0);\n    } else {\n      //vec4 directional = vec4(normalize(point), 0.0);\n\n      vec3 transformedNormal = vec3(normalMatrix * vec4(norm, 0.0));\n      vec3 lightDirection = normalize(point - vec3(mvPosition) );\n      float pointLightWeighting = max(dot(transformedNormal, lightDirection), 0.0);\n      lightWeighting = ambientColour + pointColour * pointLightWeighting;\n    }\n  }\n'};
+var _user$project$Main$uniformsShpere = F7(
+	function (tx, texture, displacement, lighting, pointColour, point, ambientColour) {
 		var perspective = A4(_elm_community$elm_linear_algebra$Math_Matrix4$makePerspective, 45, 1, 0.1, 100);
 		var camera = A3(
 			_elm_community$elm_linear_algebra$Math_Matrix4$makeLookAt,
-			A3(_elm_community$elm_linear_algebra$Math_Vector3$vec3, 0, 0, 0),
-			A3(_elm_community$elm_linear_algebra$Math_Vector3$vec3, 0, 0, -4),
+			A3(_elm_community$elm_linear_algebra$Math_Vector3$vec3, 0, 0, 10),
+			A3(_elm_community$elm_linear_algebra$Math_Vector3$vec3, 0, 0, -1),
 			A3(_elm_community$elm_linear_algebra$Math_Vector3$vec3, 0, 1, 0));
-		var worldSpace = A3(
-			_elm_community$elm_linear_algebra$Math_Matrix4$rotate,
-			tx,
-			A3(_elm_community$elm_linear_algebra$Math_Vector3$vec3, 0, 1, 0),
-			A3(
-				_elm_community$elm_linear_algebra$Math_Matrix4$rotate,
-				ty,
-				A3(_elm_community$elm_linear_algebra$Math_Vector3$vec3, 1, 0, 0),
-				_elm_community$elm_linear_algebra$Math_Matrix4$makeTranslate(displacement)));
+		var worldSpace = A2(
+			_elm_community$elm_linear_algebra$Math_Matrix4$translate,
+			displacement,
+			A2(
+				_elm_community$elm_linear_algebra$Math_Matrix4$makeRotate,
+				tx,
+				A3(_elm_community$elm_linear_algebra$Math_Vector3$vec3, 0, 1, 0)));
 		return {
 			texture: texture,
 			worldSpace: worldSpace,
@@ -11809,13 +11819,13 @@ var _user$project$Main$uniformsCube = F8(
 			normalMatrix: _elm_community$elm_linear_algebra$Math_Matrix4$transpose(
 				_elm_community$elm_linear_algebra$Math_Matrix4$inverseOrthonormal(worldSpace)),
 			lighting: lighting,
-			directionalColour: directionalColour,
+			pointColour: pointColour,
 			ambientColour: ambientColour,
-			directional: directional
+			point: point
 		};
 	});
-var _user$project$Main$renderEntity = F9(
-	function (mesh, thetaX, thetaY, texture, position, lighting, directionalColour, directional, ambientColour) {
+var _user$project$Main$renderEntity = F8(
+	function (mesh, theta, texture, position, lighting, pointColour, point, ambientColour) {
 		var _p0 = texture;
 		if (_p0.ctor === 'Nothing') {
 			return _elm_lang$core$Native_List.fromArray(
@@ -11828,11 +11838,10 @@ var _user$project$Main$renderEntity = F9(
 					_user$project$Main$vertexShader,
 					_user$project$Main$fragmentShader,
 					mesh,
-					A8(_user$project$Main$uniformsCube, thetaX, thetaY, _p0._0, position, lighting, directionalColour, directional, ambientColour))
+					A7(_user$project$Main$uniformsShpere, theta, _p0._0, position, lighting, pointColour, point, ambientColour))
 				]);
 		}
 	});
-var _user$project$Main$message = 'Keys are: Right/Left/Up/Down rotate, w/s -> move camera in/out';
 var _user$project$Main$face = function () {
 	var bottomRight = {
 		position: A3(_elm_community$elm_linear_algebra$Math_Vector3$vec3, 1, -1, 0),
@@ -11885,12 +11894,11 @@ var _user$project$Main$rotatedFace = function (_p1) {
 		A2(_elm_community$elm_linear_algebra$Math_Matrix4$mul, x, y),
 		_elm_community$elm_linear_algebra$Math_Matrix4$makeTranslate(
 			A3(_elm_community$elm_linear_algebra$Math_Vector3$vec3, 0, 0, 1)));
-	var normal = _elm_community$elm_linear_algebra$Math_Vector3$negate(
-		_elm_community$elm_linear_algebra$Math_Vector3$normalize(
-			A2(
-				_elm_community$elm_linear_algebra$Math_Matrix4$transform,
-				t,
-				A3(_elm_community$elm_linear_algebra$Math_Vector3$vec3, 0, 0, 1))));
+	var normal = _elm_community$elm_linear_algebra$Math_Vector3$normalize(
+		A2(
+			_elm_community$elm_linear_algebra$Math_Matrix4$transform,
+			t,
+			A3(_elm_community$elm_linear_algebra$Math_Vector3$vec3, 0, 0, 1)));
 	return A2(
 		_elm_lang$core$List$map,
 		each(
@@ -11917,105 +11925,115 @@ var _user$project$Main$cube = _elm_community$elm_webgl$WebGL$Triangle(
 				{ctor: '_Tuple2', _0: 0, _1: 90},
 				{ctor: '_Tuple2', _0: 0, _1: -90}
 			])));
-var _user$project$Main$move = F2(
-	function (k, position) {
-		var direction = function () {
-			var _p5 = {ctor: '_Tuple2', _0: k.w, _1: k.s};
-			_v3_2:
-			do {
-				if (_p5.ctor === '_Tuple2') {
-					if (_p5._0 === true) {
-						if (_p5._1 === false) {
-							return 0.1;
-						} else {
-							break _v3_2;
-						}
-					} else {
-						if (_p5._1 === true) {
-							return -0.1;
-						} else {
-							break _v3_2;
-						}
-					}
-				} else {
-					break _v3_2;
-				}
-			} while(false);
-			return 0;
-		}();
+var _user$project$Main$sphereFace = F5(
+	function (latitude1, latitude2, longitude1, longitude2, radius) {
+		var phi2 = _elm_lang$core$Basics$degrees(360 * longitude2);
+		var phi1 = _elm_lang$core$Basics$degrees(360 * longitude1);
+		var theta2 = _elm_lang$core$Basics$degrees(180 * latitude2);
+		var topLeft = {
+			position: A3(
+				_elm_community$elm_linear_algebra$Math_Vector3$vec3,
+				(_elm_lang$core$Basics$cos(theta2) * _elm_lang$core$Basics$sin(phi1)) * radius,
+				_elm_lang$core$Basics$sin(theta2) * radius,
+				(_elm_lang$core$Basics$cos(theta2) * _elm_lang$core$Basics$cos(phi1)) * radius),
+			coord: A3(_elm_community$elm_linear_algebra$Math_Vector3$vec3, longitude1 - 0.5, latitude2 - 0.5, 0),
+			norm: A3(
+				_elm_community$elm_linear_algebra$Math_Vector3$vec3,
+				_elm_lang$core$Basics$cos(theta2) * _elm_lang$core$Basics$sin(phi1),
+				_elm_lang$core$Basics$sin(theta2),
+				_elm_lang$core$Basics$cos(theta2) * _elm_lang$core$Basics$cos(phi1))
+		};
+		var topRight = {
+			position: A3(
+				_elm_community$elm_linear_algebra$Math_Vector3$vec3,
+				(_elm_lang$core$Basics$cos(theta2) * _elm_lang$core$Basics$sin(phi2)) * radius,
+				_elm_lang$core$Basics$sin(theta2) * radius,
+				(_elm_lang$core$Basics$cos(theta2) * _elm_lang$core$Basics$cos(phi2)) * radius),
+			coord: A3(_elm_community$elm_linear_algebra$Math_Vector3$vec3, longitude2 - 0.5, latitude2 - 0.5, 0),
+			norm: A3(
+				_elm_community$elm_linear_algebra$Math_Vector3$vec3,
+				_elm_lang$core$Basics$cos(theta2) * _elm_lang$core$Basics$sin(phi2),
+				_elm_lang$core$Basics$sin(theta2),
+				_elm_lang$core$Basics$cos(theta2) * _elm_lang$core$Basics$cos(phi2))
+		};
+		var theta1 = _elm_lang$core$Basics$degrees(180 * latitude1);
+		var bottomLeft = {
+			position: A3(
+				_elm_community$elm_linear_algebra$Math_Vector3$vec3,
+				(_elm_lang$core$Basics$cos(theta1) * _elm_lang$core$Basics$sin(phi1)) * radius,
+				_elm_lang$core$Basics$sin(theta1) * radius,
+				(_elm_lang$core$Basics$cos(theta1) * _elm_lang$core$Basics$cos(phi1)) * radius),
+			coord: A3(_elm_community$elm_linear_algebra$Math_Vector3$vec3, longitude1 - 0.5, latitude1 - 0.5, 0),
+			norm: A3(
+				_elm_community$elm_linear_algebra$Math_Vector3$vec3,
+				_elm_lang$core$Basics$cos(theta1) * _elm_lang$core$Basics$sin(phi1),
+				_elm_lang$core$Basics$sin(theta1),
+				_elm_lang$core$Basics$cos(theta1) * _elm_lang$core$Basics$cos(phi1))
+		};
+		var bottomRight = {
+			position: A3(
+				_elm_community$elm_linear_algebra$Math_Vector3$vec3,
+				(_elm_lang$core$Basics$cos(theta1) * _elm_lang$core$Basics$sin(phi2)) * radius,
+				_elm_lang$core$Basics$sin(theta1) * radius,
+				(_elm_lang$core$Basics$cos(theta1) * _elm_lang$core$Basics$cos(phi2)) * radius),
+			coord: A3(_elm_community$elm_linear_algebra$Math_Vector3$vec3, longitude2 - 0.5, latitude1 - 0.5, 0),
+			norm: A3(
+				_elm_community$elm_linear_algebra$Math_Vector3$vec3,
+				_elm_lang$core$Basics$cos(theta1) * _elm_lang$core$Basics$sin(phi2),
+				_elm_lang$core$Basics$sin(theta1),
+				_elm_lang$core$Basics$cos(theta1) * _elm_lang$core$Basics$cos(phi2))
+		};
+		return _elm_lang$core$Native_List.fromArray(
+			[
+				{ctor: '_Tuple3', _0: topLeft, _1: topRight, _2: bottomLeft},
+				{ctor: '_Tuple3', _0: bottomLeft, _1: topRight, _2: bottomRight}
+			]);
+	});
+var _user$project$Main$ring = F4(
+	function (latitude1, latitude2, segments, radius) {
+		var longitudes = A2(
+			_elm_lang$core$List$map,
+			function (idx) {
+				return {ctor: '_Tuple2', _0: idx / segments, _1: (idx + 1) / segments};
+			},
+			_elm_lang$core$Native_List.range(0, segments - 1));
 		return A2(
-			_elm_community$elm_linear_algebra$Math_Vector3$add,
-			position,
-			A3(_elm_community$elm_linear_algebra$Math_Vector3$vec3, 0, 0, direction));
+			_elm_lang$core$List$concatMap,
+			function (_p5) {
+				var _p6 = _p5;
+				return A5(_user$project$Main$sphereFace, latitude1, latitude2, _p6._0, _p6._1, radius);
+			},
+			longitudes);
 	});
-var _user$project$Main$rotateY = F2(
-	function (k, velocity) {
-		var direction = function () {
-			var _p6 = {ctor: '_Tuple2', _0: k.up, _1: k.down};
-			_v4_2:
-			do {
-				if (_p6.ctor === '_Tuple2') {
-					if (_p6._0 === true) {
-						if (_p6._1 === false) {
-							return 0.1;
-						} else {
-							break _v4_2;
-						}
-					} else {
-						if (_p6._1 === true) {
-							return -0.1;
-						} else {
-							break _v4_2;
-						}
-					}
-				} else {
-					break _v4_2;
-				}
-			} while(false);
-			return 0;
-		}();
-		return velocity + direction;
-	});
-var _user$project$Main$rotateX = F2(
-	function (k, velocity) {
-		var direction = function () {
-			var _p7 = {ctor: '_Tuple2', _0: k.right, _1: k.left};
-			_v5_2:
-			do {
-				if (_p7.ctor === '_Tuple2') {
-					if (_p7._0 === true) {
-						if (_p7._1 === false) {
-							return 0.1;
-						} else {
-							break _v5_2;
-						}
-					} else {
-						if (_p7._1 === true) {
-							return -0.1;
-						} else {
-							break _v5_2;
-						}
-					}
-				} else {
-					break _v5_2;
-				}
-			} while(false);
-			return 0;
-		}();
-		return velocity + direction;
-	});
+var _user$project$Main$numSegments = 8;
+var _user$project$Main$sphere = function () {
+	var latitudes = A2(
+		_elm_lang$core$List$map,
+		function (idx) {
+			return {ctor: '_Tuple2', _0: idx / _user$project$Main$numSegments, _1: (idx + 1) / _user$project$Main$numSegments};
+		},
+		_elm_lang$core$Native_List.range((0 - _user$project$Main$numSegments) / 2, (_user$project$Main$numSegments / 2) - 1));
+	return _elm_community$elm_webgl$WebGL$Triangle(
+		A2(
+			_elm_lang$core$List$concatMap,
+			function (_p7) {
+				var _p8 = _p7;
+				return A4(_user$project$Main$ring, _p8._0, _p8._1, _user$project$Main$numSegments, 1);
+			},
+			latitudes));
+}();
 var _user$project$Main$updateAndParse = F2(
 	function ($default, text) {
-		var _p8 = {
+		var _p9 = {
 			ctor: '_Tuple3',
 			_0: _elm_lang$core$String$toFloat(text.x),
 			_1: _elm_lang$core$String$toFloat(text.y),
 			_2: _elm_lang$core$String$toFloat(text.z)
 		};
-		if ((((_p8.ctor === '_Tuple3') && (_p8._0.ctor === 'Ok')) && (_p8._1.ctor === 'Ok')) && (_p8._2.ctor === 'Ok')) {
+		if ((((_p9.ctor === '_Tuple3') && (_p9._0.ctor === 'Ok')) && (_p9._1.ctor === 'Ok')) && (_p9._2.ctor === 'Ok')) {
 			return {
 				ctor: '_Tuple2',
-				_0: A3(_elm_community$elm_linear_algebra$Math_Vector3$vec3, _p8._0._0, _p8._1._0, _p8._2._0),
+				_0: A3(_elm_community$elm_linear_algebra$Math_Vector3$vec3, _p9._0._0, _p9._1._0, _p9._2._0),
 				_1: text
 			};
 		} else {
@@ -12045,8 +12063,8 @@ var _user$project$Main$updateAndParseX = F3(
 	});
 var _user$project$Main$update = F2(
 	function (action, model) {
-		var _p9 = action;
-		switch (_p9.ctor) {
+		var _p10 = action;
+		switch (_p10.ctor) {
 			case 'TexturesError':
 				return {ctor: '_Tuple2', _0: model, _1: _elm_lang$core$Platform_Cmd$none};
 			case 'TexturesLoaded':
@@ -12054,38 +12072,13 @@ var _user$project$Main$update = F2(
 					ctor: '_Tuple2',
 					_0: _elm_lang$core$Native_Utils.update(
 						model,
-						{texture: _p9._0}),
+						{textures: _p10._0}),
 					_1: _elm_lang$core$Platform_Cmd$none
 				};
-			case 'TextureChange':
+			case 'MouseChange':
 				return {
 					ctor: '_Tuple2',
-					_0: _p9._0(model),
-					_1: _elm_lang$core$Platform_Cmd$none
-				};
-			case 'KeyChange':
-				return {
-					ctor: '_Tuple2',
-					_0: _elm_lang$core$Native_Utils.update(
-						model,
-						{
-							keys: _p9._0(model.keys)
-						}),
-					_1: _elm_lang$core$Platform_Cmd$none
-				};
-			case 'Animate':
-				var _p10 = _p9._0;
-				return {
-					ctor: '_Tuple2',
-					_0: _elm_lang$core$Native_Utils.update(
-						model,
-						{
-							thetaX: model.thetaX + ((model.rx * _p10) / 1000),
-							thetaY: model.thetaY + ((model.ry * _p10) / 1000),
-							position: A2(_user$project$Main$move, model.keys, model.position),
-							rx: A2(_user$project$Main$rotateX, model.keys, model.rx),
-							ry: A2(_user$project$Main$rotateY, model.keys, model.ry)
-						}),
+					_0: _p10._0(model),
 					_1: _elm_lang$core$Platform_Cmd$none
 				};
 			case 'UseLighting':
@@ -12098,74 +12091,74 @@ var _user$project$Main$update = F2(
 						}),
 					_1: _elm_lang$core$Platform_Cmd$none
 				};
-			case 'ChangeDirectionalX':
-				var _p11 = A3(_user$project$Main$updateAndParseX, model.directional, model.directionalText, _p9._0);
+			case 'ChangePointX':
+				var _p11 = A3(_user$project$Main$updateAndParseX, model.point, model.pointText, _p10._0);
 				var numeric = _p11._0;
 				var textual = _p11._1;
 				return {
 					ctor: '_Tuple2',
 					_0: _elm_lang$core$Native_Utils.update(
 						model,
-						{directional: numeric, directionalText: textual}),
+						{point: numeric, pointText: textual}),
 					_1: _elm_lang$core$Platform_Cmd$none
 				};
-			case 'ChangeDirectionalY':
-				var _p12 = A3(_user$project$Main$updateAndParseY, model.directional, model.directionalText, _p9._0);
+			case 'ChangePointY':
+				var _p12 = A3(_user$project$Main$updateAndParseY, model.point, model.pointText, _p10._0);
 				var numeric = _p12._0;
 				var textual = _p12._1;
 				return {
 					ctor: '_Tuple2',
 					_0: _elm_lang$core$Native_Utils.update(
 						model,
-						{directional: numeric, directionalText: textual}),
+						{point: numeric, pointText: textual}),
 					_1: _elm_lang$core$Platform_Cmd$none
 				};
-			case 'ChangeDirectionalZ':
-				var _p13 = A3(_user$project$Main$updateAndParseZ, model.directional, model.directionalText, _p9._0);
+			case 'ChangePointZ':
+				var _p13 = A3(_user$project$Main$updateAndParseZ, model.point, model.pointText, _p10._0);
 				var numeric = _p13._0;
 				var textual = _p13._1;
 				return {
 					ctor: '_Tuple2',
 					_0: _elm_lang$core$Native_Utils.update(
 						model,
-						{directional: numeric, directionalText: textual}),
+						{point: numeric, pointText: textual}),
 					_1: _elm_lang$core$Platform_Cmd$none
 				};
-			case 'ChangeDirectionalColourR':
-				var _p14 = A3(_user$project$Main$updateAndParseX, model.directionalColour, model.directionalColourText, _p9._0);
+			case 'ChangePointColourR':
+				var _p14 = A3(_user$project$Main$updateAndParseX, model.pointColour, model.pointColourText, _p10._0);
 				var numeric = _p14._0;
 				var textual = _p14._1;
 				return {
 					ctor: '_Tuple2',
 					_0: _elm_lang$core$Native_Utils.update(
 						model,
-						{directionalColour: numeric, directionalColourText: textual}),
+						{pointColour: numeric, pointColourText: textual}),
 					_1: _elm_lang$core$Platform_Cmd$none
 				};
-			case 'ChangeDirectionalColourG':
-				var _p15 = A3(_user$project$Main$updateAndParseY, model.directionalColour, model.directionalColourText, _p9._0);
+			case 'ChangePointColourG':
+				var _p15 = A3(_user$project$Main$updateAndParseY, model.pointColour, model.pointColourText, _p10._0);
 				var numeric = _p15._0;
 				var textual = _p15._1;
 				return {
 					ctor: '_Tuple2',
 					_0: _elm_lang$core$Native_Utils.update(
 						model,
-						{directionalColour: numeric, directionalColourText: textual}),
+						{pointColour: numeric, pointColourText: textual}),
 					_1: _elm_lang$core$Platform_Cmd$none
 				};
-			case 'ChangeDirectionalColourB':
-				var _p16 = A3(_user$project$Main$updateAndParseZ, model.directionalColour, model.directionalColourText, _p9._0);
+			case 'ChangePointColourB':
+				var _p16 = A3(_user$project$Main$updateAndParseZ, model.pointColour, model.pointColourText, _p10._0);
 				var numeric = _p16._0;
 				var textual = _p16._1;
 				return {
 					ctor: '_Tuple2',
 					_0: _elm_lang$core$Native_Utils.update(
 						model,
-						{directionalColour: numeric, directionalColourText: textual}),
+						{pointColour: numeric, pointColourText: textual}),
 					_1: _elm_lang$core$Platform_Cmd$none
 				};
 			case 'ChangeAmbientColourR':
-				var _p17 = A3(_user$project$Main$updateAndParseX, model.ambientColour, model.ambientColourText, _p9._0);
+				var _p17 = A3(_user$project$Main$updateAndParseX, model.ambientColour, model.ambientColourText, _p10._0);
 				var numeric = _p17._0;
 				var textual = _p17._1;
 				return {
@@ -12176,7 +12169,7 @@ var _user$project$Main$update = F2(
 					_1: _elm_lang$core$Platform_Cmd$none
 				};
 			case 'ChangeAmbientColourG':
-				var _p18 = A3(_user$project$Main$updateAndParseY, model.ambientColour, model.ambientColourText, _p9._0);
+				var _p18 = A3(_user$project$Main$updateAndParseY, model.ambientColour, model.ambientColourText, _p10._0);
 				var numeric = _p18._0;
 				var textual = _p18._1;
 				return {
@@ -12186,8 +12179,8 @@ var _user$project$Main$update = F2(
 						{ambientColour: numeric, ambientColourText: textual}),
 					_1: _elm_lang$core$Platform_Cmd$none
 				};
-			default:
-				var _p19 = A3(_user$project$Main$updateAndParseZ, model.ambientColour, model.ambientColourText, _p9._0);
+			case 'ChangeAmbientColourB':
+				var _p19 = A3(_user$project$Main$updateAndParseZ, model.ambientColour, model.ambientColourText, _p10._0);
 				var numeric = _p19._0;
 				var textual = _p19._1;
 				return {
@@ -12197,14 +12190,31 @@ var _user$project$Main$update = F2(
 						{ambientColour: numeric, ambientColourText: textual}),
 					_1: _elm_lang$core$Platform_Cmd$none
 				};
+			default:
+				return {
+					ctor: '_Tuple2',
+					_0: _elm_lang$core$Native_Utils.update(
+						model,
+						{theta: model.theta + (_p10._0 / 1000)}),
+					_1: _elm_lang$core$Platform_Cmd$none
+				};
 		}
 	});
 var _user$project$Main$fetchTextures = A2(
 	_elm_lang$core$Task$andThen,
-	A2(_elm_community$elm_webgl$WebGL$loadTextureWithFilter, _elm_community$elm_webgl$WebGL$Nearest, 'textures/crate.gif'),
-	function (nearestTexture) {
-		return _elm_lang$core$Task$succeed(
-			_elm_lang$core$Maybe$Just(nearestTexture));
+	_elm_community$elm_webgl$WebGL$loadTexture('textures/moon.gif'),
+	function (moonTexture) {
+		return A2(
+			_elm_lang$core$Task$andThen,
+			_elm_community$elm_webgl$WebGL$loadTexture('textures/crate.gif'),
+			function (crateTexture) {
+				return _elm_lang$core$Task$succeed(
+					{
+						ctor: '_Tuple2',
+						_0: _elm_lang$core$Maybe$Just(moonTexture),
+						_1: _elm_lang$core$Maybe$Just(crateTexture)
+					});
+			});
 	});
 var _user$project$Main$Model = function (a) {
 	return function (b) {
@@ -12218,11 +12228,7 @@ var _user$project$Main$Model = function (a) {
 									return function (j) {
 										return function (k) {
 											return function (l) {
-												return function (m) {
-													return function (n) {
-														return {texture: a, thetaX: b, thetaY: c, keys: d, position: e, rx: f, ry: g, lighting: h, directionalColourText: i, directionalColour: j, ambientColourText: k, ambientColour: l, directionalText: m, directional: n};
-													};
-												};
+												return {textures: a, positionMoon: b, positionCrate: c, lighting: d, theta: e, mouseStatus: f, pointColourText: g, pointColour: h, ambientColourText: i, ambientColour: j, pointText: k, point: l};
 											};
 										};
 									};
@@ -12235,22 +12241,32 @@ var _user$project$Main$Model = function (a) {
 		};
 	};
 };
+var _user$project$Main$MouseStatus = F5(
+	function (a, b, c, d, e) {
+		return {pressed: a, x1: b, y1: c, x2: d, y2: e};
+	});
 var _user$project$Main$Triplet = F3(
 	function (a, b, c) {
 		return {x: a, y: b, z: c};
 	});
-var _user$project$Main$Keys = F6(
-	function (a, b, c, d, e, f) {
-		return {left: a, right: b, up: c, down: d, w: e, s: f};
-	});
-var _user$project$Main$ChangeDirectionalZ = function (a) {
-	return {ctor: 'ChangeDirectionalZ', _0: a};
+var _user$project$Main$Animate = function (a) {
+	return {ctor: 'Animate', _0: a};
 };
-var _user$project$Main$ChangeDirectionalY = function (a) {
-	return {ctor: 'ChangeDirectionalY', _0: a};
+var _user$project$Main$subscriptions = function (_p20) {
+	return _elm_lang$core$Platform_Sub$batch(
+		_elm_lang$core$Native_List.fromArray(
+			[
+				_elm_lang$animation_frame$AnimationFrame$diffs(_user$project$Main$Animate)
+			]));
 };
-var _user$project$Main$ChangeDirectionalX = function (a) {
-	return {ctor: 'ChangeDirectionalX', _0: a};
+var _user$project$Main$ChangePointZ = function (a) {
+	return {ctor: 'ChangePointZ', _0: a};
+};
+var _user$project$Main$ChangePointY = function (a) {
+	return {ctor: 'ChangePointY', _0: a};
+};
+var _user$project$Main$ChangePointX = function (a) {
+	return {ctor: 'ChangePointX', _0: a};
 };
 var _user$project$Main$ChangeAmbientColourB = function (a) {
 	return {ctor: 'ChangeAmbientColourB', _0: a};
@@ -12261,23 +12277,33 @@ var _user$project$Main$ChangeAmbientColourG = function (a) {
 var _user$project$Main$ChangeAmbientColourR = function (a) {
 	return {ctor: 'ChangeAmbientColourR', _0: a};
 };
-var _user$project$Main$ChangeDirectionalColourB = function (a) {
-	return {ctor: 'ChangeDirectionalColourB', _0: a};
+var _user$project$Main$ChangePointColourB = function (a) {
+	return {ctor: 'ChangePointColourB', _0: a};
 };
-var _user$project$Main$ChangeDirectionalColourG = function (a) {
-	return {ctor: 'ChangeDirectionalColourG', _0: a};
+var _user$project$Main$ChangePointColourG = function (a) {
+	return {ctor: 'ChangePointColourG', _0: a};
 };
-var _user$project$Main$ChangeDirectionalColourR = function (a) {
-	return {ctor: 'ChangeDirectionalColourR', _0: a};
+var _user$project$Main$ChangePointColourR = function (a) {
+	return {ctor: 'ChangePointColourR', _0: a};
 };
 var _user$project$Main$UseLighting = {ctor: 'UseLighting'};
-var _user$project$Main$view = function (_p20) {
-	var _p21 = _p20;
-	var _p25 = _p21.lighting;
-	var _p24 = _p21.directionalText;
-	var _p23 = _p21.directionalColourText;
-	var _p22 = _p21.ambientColourText;
-	var entities = A9(_user$project$Main$renderEntity, _user$project$Main$cube, _p21.thetaX, _p21.thetaY, _p21.texture, _p21.position, _p25, _p21.directionalColour, _p21.directional, _p21.ambientColour);
+var _user$project$Main$view = function (_p21) {
+	var _p22 = _p21;
+	var _p31 = _p22.theta;
+	var _p30 = _p22.pointText;
+	var _p29 = _p22.pointColourText;
+	var _p28 = _p22.pointColour;
+	var _p27 = _p22.point;
+	var _p26 = _p22.lighting;
+	var _p25 = _p22.ambientColourText;
+	var _p24 = _p22.ambientColour;
+	var _p23 = _p22.textures;
+	var textureMoon = _p23._0;
+	var textureCrate = _p23._1;
+	var entities = A2(
+		_elm_lang$core$Basics_ops['++'],
+		A8(_user$project$Main$renderEntity, _user$project$Main$sphere, _p31, textureMoon, _p22.positionMoon, _p26, _p28, _p27, _p24),
+		A8(_user$project$Main$renderEntity, _user$project$Main$cube, _p31, textureCrate, _p22.positionCrate, _p26, _p28, _p27, _p24));
 	return A2(
 		_elm_lang$html$Html$div,
 		_elm_lang$core$Native_List.fromArray(
@@ -12288,8 +12314,8 @@ var _user$project$Main$view = function (_p20) {
 				_elm_community$elm_webgl$WebGL$toHtml,
 				_elm_lang$core$Native_List.fromArray(
 					[
-						_elm_lang$html$Html_Attributes$width(400),
-						_elm_lang$html$Html_Attributes$height(400),
+						_elm_lang$html$Html_Attributes$width(600),
+						_elm_lang$html$Html_Attributes$height(600),
 						_elm_lang$html$Html_Attributes$style(
 						_elm_lang$core$Native_List.fromArray(
 							[
@@ -12323,7 +12349,7 @@ var _user$project$Main$view = function (_p20) {
 									[
 										_elm_lang$html$Html_Attributes$type$('checkbox'),
 										_elm_lang$html$Html_Events$onClick(_user$project$Main$UseLighting),
-										_elm_lang$html$Html_Attributes$checked(_p25)
+										_elm_lang$html$Html_Attributes$checked(_p26)
 									]),
 								_elm_lang$core$Native_List.fromArray(
 									[])),
@@ -12341,7 +12367,7 @@ var _user$project$Main$view = function (_p20) {
 									[]),
 								_elm_lang$core$Native_List.fromArray(
 									[
-										_elm_lang$html$Html$text('Directional Light')
+										_elm_lang$html$Html$text('Point Light')
 									])),
 								A2(
 								_elm_lang$html$Html$div,
@@ -12349,7 +12375,7 @@ var _user$project$Main$view = function (_p20) {
 									[]),
 								_elm_lang$core$Native_List.fromArray(
 									[
-										_elm_lang$html$Html$text('Direction: '),
+										_elm_lang$html$Html$text('Position: '),
 										_elm_lang$html$Html$text(' x: '),
 										A2(
 										_elm_lang$html$Html$input,
@@ -12357,8 +12383,8 @@ var _user$project$Main$view = function (_p20) {
 											[
 												_elm_lang$html$Html_Attributes$type$('text'),
 												_elm_lang$html$Html_Attributes$step('0.01'),
-												_elm_lang$html$Html_Events$onInput(_user$project$Main$ChangeDirectionalX),
-												_elm_lang$html$Html_Attributes$value(_p24.x)
+												_elm_lang$html$Html_Events$onInput(_user$project$Main$ChangePointX),
+												_elm_lang$html$Html_Attributes$value(_p30.x)
 											]),
 										_elm_lang$core$Native_List.fromArray(
 											[])),
@@ -12369,8 +12395,8 @@ var _user$project$Main$view = function (_p20) {
 											[
 												_elm_lang$html$Html_Attributes$type$('text'),
 												_elm_lang$html$Html_Attributes$step('0.01'),
-												_elm_lang$html$Html_Events$onInput(_user$project$Main$ChangeDirectionalY),
-												_elm_lang$html$Html_Attributes$value(_p24.y)
+												_elm_lang$html$Html_Events$onInput(_user$project$Main$ChangePointY),
+												_elm_lang$html$Html_Attributes$value(_p30.y)
 											]),
 										_elm_lang$core$Native_List.fromArray(
 											[])),
@@ -12381,8 +12407,8 @@ var _user$project$Main$view = function (_p20) {
 											[
 												_elm_lang$html$Html_Attributes$type$('text'),
 												_elm_lang$html$Html_Attributes$step('0.01'),
-												_elm_lang$html$Html_Events$onInput(_user$project$Main$ChangeDirectionalZ),
-												_elm_lang$html$Html_Attributes$value(_p24.z)
+												_elm_lang$html$Html_Events$onInput(_user$project$Main$ChangePointZ),
+												_elm_lang$html$Html_Attributes$value(_p30.z)
 											]),
 										_elm_lang$core$Native_List.fromArray(
 											[]))
@@ -12401,8 +12427,8 @@ var _user$project$Main$view = function (_p20) {
 											[
 												_elm_lang$html$Html_Attributes$type$('text'),
 												_elm_lang$html$Html_Attributes$step('0.01'),
-												_elm_lang$html$Html_Events$onInput(_user$project$Main$ChangeDirectionalColourR),
-												_elm_lang$html$Html_Attributes$value(_p23.x)
+												_elm_lang$html$Html_Events$onInput(_user$project$Main$ChangePointColourR),
+												_elm_lang$html$Html_Attributes$value(_p29.x)
 											]),
 										_elm_lang$core$Native_List.fromArray(
 											[])),
@@ -12413,8 +12439,8 @@ var _user$project$Main$view = function (_p20) {
 											[
 												_elm_lang$html$Html_Attributes$type$('text'),
 												_elm_lang$html$Html_Attributes$step('0.01'),
-												_elm_lang$html$Html_Events$onInput(_user$project$Main$ChangeDirectionalColourG),
-												_elm_lang$html$Html_Attributes$value(_p23.y)
+												_elm_lang$html$Html_Events$onInput(_user$project$Main$ChangePointColourG),
+												_elm_lang$html$Html_Attributes$value(_p29.y)
 											]),
 										_elm_lang$core$Native_List.fromArray(
 											[])),
@@ -12425,8 +12451,8 @@ var _user$project$Main$view = function (_p20) {
 											[
 												_elm_lang$html$Html_Attributes$type$('text'),
 												_elm_lang$html$Html_Attributes$step('0.01'),
-												_elm_lang$html$Html_Events$onInput(_user$project$Main$ChangeDirectionalColourB),
-												_elm_lang$html$Html_Attributes$value(_p23.z)
+												_elm_lang$html$Html_Events$onInput(_user$project$Main$ChangePointColourB),
+												_elm_lang$html$Html_Attributes$value(_p29.z)
 											]),
 										_elm_lang$core$Native_List.fromArray(
 											[]))
@@ -12454,7 +12480,7 @@ var _user$project$Main$view = function (_p20) {
 												_elm_lang$html$Html_Attributes$type$('text'),
 												_elm_lang$html$Html_Attributes$step('0.01'),
 												_elm_lang$html$Html_Events$onInput(_user$project$Main$ChangeAmbientColourR),
-												_elm_lang$html$Html_Attributes$value(_p22.x)
+												_elm_lang$html$Html_Attributes$value(_p25.x)
 											]),
 										_elm_lang$core$Native_List.fromArray(
 											[])),
@@ -12466,7 +12492,7 @@ var _user$project$Main$view = function (_p20) {
 												_elm_lang$html$Html_Attributes$type$('text'),
 												_elm_lang$html$Html_Attributes$step('0.01'),
 												_elm_lang$html$Html_Events$onInput(_user$project$Main$ChangeAmbientColourG),
-												_elm_lang$html$Html_Attributes$value(_p22.y)
+												_elm_lang$html$Html_Attributes$value(_p25.y)
 											]),
 										_elm_lang$core$Native_List.fromArray(
 											[])),
@@ -12478,82 +12504,17 @@ var _user$project$Main$view = function (_p20) {
 												_elm_lang$html$Html_Attributes$type$('text'),
 												_elm_lang$html$Html_Attributes$step('0.01'),
 												_elm_lang$html$Html_Events$onInput(_user$project$Main$ChangeAmbientColourB),
-												_elm_lang$html$Html_Attributes$value(_p22.z)
+												_elm_lang$html$Html_Attributes$value(_p25.z)
 											]),
 										_elm_lang$core$Native_List.fromArray(
 											[]))
 									]))
-							])),
-						_elm_lang$html$Html$text(_user$project$Main$message)
+							]))
 					]))
 			]));
 };
-var _user$project$Main$Animate = function (a) {
-	return {ctor: 'Animate', _0: a};
-};
-var _user$project$Main$KeyChange = function (a) {
-	return {ctor: 'KeyChange', _0: a};
-};
-var _user$project$Main$keyChange = F2(
-	function (on, keyCode) {
-		return _user$project$Main$KeyChange(
-			function () {
-				var _p26 = keyCode;
-				switch (_p26) {
-					case 37:
-						return function (k) {
-							return _elm_lang$core$Native_Utils.update(
-								k,
-								{left: on});
-						};
-					case 39:
-						return function (k) {
-							return _elm_lang$core$Native_Utils.update(
-								k,
-								{right: on});
-						};
-					case 38:
-						return function (k) {
-							return _elm_lang$core$Native_Utils.update(
-								k,
-								{up: on});
-						};
-					case 40:
-						return function (k) {
-							return _elm_lang$core$Native_Utils.update(
-								k,
-								{down: on});
-						};
-					case 87:
-						return function (k) {
-							return _elm_lang$core$Native_Utils.update(
-								k,
-								{w: on});
-						};
-					case 83:
-						return function (k) {
-							return _elm_lang$core$Native_Utils.update(
-								k,
-								{s: on});
-						};
-					default:
-						return _elm_lang$core$Basics$identity;
-				}
-			}());
-	});
-var _user$project$Main$subscriptions = function (_p27) {
-	return _elm_lang$core$Platform_Sub$batch(
-		_elm_lang$core$Native_List.fromArray(
-			[
-				_elm_lang$animation_frame$AnimationFrame$diffs(_user$project$Main$Animate),
-				_elm_lang$keyboard$Keyboard$downs(
-				_user$project$Main$keyChange(true)),
-				_elm_lang$keyboard$Keyboard$ups(
-				_user$project$Main$keyChange(false))
-			]));
-};
-var _user$project$Main$TextureChange = function (a) {
-	return {ctor: 'TextureChange', _0: a};
+var _user$project$Main$MouseChange = function (a) {
+	return {ctor: 'MouseChange', _0: a};
 };
 var _user$project$Main$TexturesLoaded = function (a) {
 	return {ctor: 'TexturesLoaded', _0: a};
@@ -12564,20 +12525,18 @@ var _user$project$Main$TexturesError = function (a) {
 var _user$project$Main$init = {
 	ctor: '_Tuple2',
 	_0: {
-		texture: _elm_lang$core$Maybe$Nothing,
-		thetaX: 0,
-		thetaY: 0,
-		rx: 0,
-		ry: 0,
-		keys: A6(_user$project$Main$Keys, false, false, false, false, false, false),
-		position: A3(_elm_community$elm_linear_algebra$Math_Vector3$vec3, 0, 0, -4),
+		textures: {ctor: '_Tuple2', _0: _elm_lang$core$Maybe$Nothing, _1: _elm_lang$core$Maybe$Nothing},
+		theta: 0,
+		positionCrate: A3(_elm_community$elm_linear_algebra$Math_Vector3$vec3, -2, 0, 0),
+		positionMoon: A3(_elm_community$elm_linear_algebra$Math_Vector3$vec3, 2, 0, 0),
 		lighting: true,
-		directionalColourText: {x: '0.8', y: '0.2', z: '0.2'},
-		directionalColour: A3(_elm_community$elm_linear_algebra$Math_Vector3$vec3, 0.8, 0.2, 0.2),
-		ambientColourText: {x: '0.2', y: '0.2', z: '0.9'},
-		ambientColour: A3(_elm_community$elm_linear_algebra$Math_Vector3$vec3, 0.2, 0.2, 0.8),
-		directionalText: {x: '-0.25', y: '0.25', z: '-1'},
-		directional: A3(_elm_community$elm_linear_algebra$Math_Vector3$vec3, -0.25, -0.25, -1)
+		mouseStatus: A5(_user$project$Main$MouseStatus, false, 0, 0, 0, 0),
+		pointColourText: {x: '1', y: '1', z: '1'},
+		pointColour: A3(_elm_community$elm_linear_algebra$Math_Vector3$vec3, 1, 1, 1),
+		ambientColourText: {x: '0.2', y: '0.2', z: '0.2'},
+		ambientColour: A3(_elm_community$elm_linear_algebra$Math_Vector3$vec3, 0.2, 0.2, 0.2),
+		pointText: {x: '0', y: '0', z: '0'},
+		point: A3(_elm_community$elm_linear_algebra$Math_Vector3$vec3, 0, 0, 0)
 	},
 	_1: A3(_elm_lang$core$Task$perform, _user$project$Main$TexturesError, _user$project$Main$TexturesLoaded, _user$project$Main$fetchTextures)
 };
