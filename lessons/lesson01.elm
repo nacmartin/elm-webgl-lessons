@@ -1,10 +1,8 @@
 import Math.Vector3 exposing (..)
-import Math.Matrix4 exposing (..)
 import WebGL exposing (..)
 import Html exposing (Html)
 import Html.App as Html
 import Html.Attributes exposing (width, height, style)
-import AnimationFrame
 
 -- Create a mesh with a triangle and a square
 
@@ -21,23 +19,20 @@ triangle =
 
 square : Drawable Vertex
 square =
-  WebGL.Triangle
-    [ ( { position = vec3 1 1 0 }
+  WebGL.TriangleStrip
+    ( [ { position = vec3 1 1 0 }
       , { position = vec3 -1 1 0 }
       , { position = vec3 1 -1 0 }
-      )
-    , ( { position = vec3 -1 1 0 }
-      , { position = vec3 1 -1 0 }
       , { position = vec3 -1 -1 0 }
-      )
-    ]
+      ]
+    )
 
 main : Html msg
 main =
   WebGL.toHtml
     [ width 400, height 400, style [("backgroundColor", "black")] ]
-    ( [render vertexShader fragmentShader triangle { displacement = vec3 -1.5 0 0}] ++
-      [render vertexShader fragmentShader square { displacement = vec3 1.5 0 0}]
+    ( [render vertexShader fragmentShader square { displacement = vec3 -1.5 0 0}] ++
+      [render vertexShader fragmentShader triangle { displacement = vec3 1.5 0 0}]
     )
 
 -- Shaders

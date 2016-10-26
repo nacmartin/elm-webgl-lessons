@@ -21,15 +21,11 @@ triangle =
 
 square : Drawable Vertex
 square =
-  Triangle
-    [ ( Vertex (vec3 1 1 0) (vec3 0.5 0.5 1)
-      , Vertex (vec3 -1 1 0) (vec3 0.5 0.5 1)
-      , Vertex (vec3 1 -1 0) (vec3 0.5 0.5 1)
-      ),
-      ( Vertex (vec3 -1 1 0) (vec3 0.5 0.5 1)
-      , Vertex (vec3 1 -1 0) (vec3 0.5 0.5 1)
-      , Vertex (vec3 -1 -1 0) (vec3 0.5 0.5 1)
-      )
+  TriangleStrip
+    [ Vertex (vec3 1 1 0) (vec3 0.5 0.5 1)
+    , Vertex (vec3 -1 1 0) (vec3 0.5 0.5 1)
+    , Vertex (vec3 1 -1 0) (vec3 0.5 0.5 1)
+    , Vertex (vec3 -1 -1 0) (vec3 0.5 0.5 1)
     ]
 
 main : Html msg
