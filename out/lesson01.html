@@ -4528,29 +4528,6 @@ var _elm_community$elm_linear_algebra$Math_Vector3$j = A3(_elm_community$elm_lin
 var _elm_community$elm_linear_algebra$Math_Vector3$i = A3(_elm_community$elm_linear_algebra$Native_MJS.vec3, 1, 0, 0);
 var _elm_community$elm_linear_algebra$Math_Vector3$vec3 = _elm_community$elm_linear_algebra$Native_MJS.vec3;
 var _elm_community$elm_linear_algebra$Math_Vector3$Vec3 = {ctor: 'Vec3'};
-var _elm_community$elm_linear_algebra$Math_Matrix4$makeBasis = _elm_community$elm_linear_algebra$Native_MJS.m4x4makeBasis;
-var _elm_community$elm_linear_algebra$Math_Matrix4$transpose = _elm_community$elm_linear_algebra$Native_MJS.m4x4transpose;
-var _elm_community$elm_linear_algebra$Math_Matrix4$makeLookAt = _elm_community$elm_linear_algebra$Native_MJS.m4x4makeLookAt;
-var _elm_community$elm_linear_algebra$Math_Matrix4$translate = _elm_community$elm_linear_algebra$Native_MJS.m4x4translate;
-var _elm_community$elm_linear_algebra$Math_Matrix4$translate3 = _elm_community$elm_linear_algebra$Native_MJS.m4x4translate3;
-var _elm_community$elm_linear_algebra$Math_Matrix4$makeTranslate = _elm_community$elm_linear_algebra$Native_MJS.m4x4makeTranslate;
-var _elm_community$elm_linear_algebra$Math_Matrix4$makeTranslate3 = _elm_community$elm_linear_algebra$Native_MJS.m4x4makeTranslate3;
-var _elm_community$elm_linear_algebra$Math_Matrix4$scale = _elm_community$elm_linear_algebra$Native_MJS.m4x4scale;
-var _elm_community$elm_linear_algebra$Math_Matrix4$scale3 = _elm_community$elm_linear_algebra$Native_MJS.m4x4scale3;
-var _elm_community$elm_linear_algebra$Math_Matrix4$makeScale = _elm_community$elm_linear_algebra$Native_MJS.m4x4makeScale;
-var _elm_community$elm_linear_algebra$Math_Matrix4$makeScale3 = _elm_community$elm_linear_algebra$Native_MJS.m4x4makeScale3;
-var _elm_community$elm_linear_algebra$Math_Matrix4$rotate = _elm_community$elm_linear_algebra$Native_MJS.m4x4rotate;
-var _elm_community$elm_linear_algebra$Math_Matrix4$makeRotate = _elm_community$elm_linear_algebra$Native_MJS.m4x4makeRotate;
-var _elm_community$elm_linear_algebra$Math_Matrix4$mulAffine = _elm_community$elm_linear_algebra$Native_MJS.m4x4mulAffine;
-var _elm_community$elm_linear_algebra$Math_Matrix4$mul = _elm_community$elm_linear_algebra$Native_MJS.m4x4mul;
-var _elm_community$elm_linear_algebra$Math_Matrix4$makeOrtho2D = _elm_community$elm_linear_algebra$Native_MJS.m4x4makeOrtho2D;
-var _elm_community$elm_linear_algebra$Math_Matrix4$makeOrtho = _elm_community$elm_linear_algebra$Native_MJS.m4x4makeOrtho;
-var _elm_community$elm_linear_algebra$Math_Matrix4$makePerspective = _elm_community$elm_linear_algebra$Native_MJS.m4x4makePerspective;
-var _elm_community$elm_linear_algebra$Math_Matrix4$makeFrustum = _elm_community$elm_linear_algebra$Native_MJS.m4x4makeFrustum;
-var _elm_community$elm_linear_algebra$Math_Matrix4$inverseOrthonormal = _elm_community$elm_linear_algebra$Native_MJS.m4x4inverseOrthonormal;
-var _elm_community$elm_linear_algebra$Math_Matrix4$identity = _elm_community$elm_linear_algebra$Native_MJS.m4x4identity;
-var _elm_community$elm_linear_algebra$Math_Matrix4$transform = _elm_community$elm_linear_algebra$Native_MJS.v3mul4x4;
-var _elm_community$elm_linear_algebra$Math_Matrix4$Mat4 = {ctor: 'Mat4'};
 //import Maybe, Native.List, Native.Utils, Result //
 
 var _elm_lang$core$Native_String = function() {
@@ -6003,19 +5980,21 @@ var _elm_community$elm_webgl$Native_WebGL = function () {
   function get_render_info(gl, render_type) {
     switch (render_type) {
       case 'Triangle':
-        return { mode: gl.TRIANGLES, elemSize: 3 };
+        return { mode: gl.TRIANGLES, elemSize: 3, indexed: false };
       case 'LineStrip':
-        return { mode: gl.LINE_STRIP, elemSize: 1 };
+        return { mode: gl.LINE_STRIP, elemSize: 1, indexed: false };
       case 'LineLoop':
-        return { mode: gl.LINE_LOOP, elemSize: 1 };
+        return { mode: gl.LINE_LOOP, elemSize: 1, indexed: false };
       case 'Points':
-        return { mode: gl.POINTS, elemSize: 1 };
+        return { mode: gl.POINTS, elemSize: 1, indexed: false };
       case 'Lines':
-        return { mode: gl.LINES, elemSize: 2 };
+        return { mode: gl.LINES, elemSize: 2, indexed: false };
       case 'TriangleStrip':
-        return { mode: gl.TRIANGLE_STRIP, elemSize: 1 };
+        return { mode: gl.TRIANGLE_STRIP, elemSize: 1, indexed: false };
       case 'TriangleFan':
-        return { mode: gl.TRIANGLE_FAN, elemSize: 1 };
+        return { mode: gl.TRIANGLE_FAN, elemSize: 1, indexed: false };
+      case 'IndexedTriangles':
+        return { mode: gl.TRIANGLES, elemSize: 1, indexed: true };
     }
   }
 
@@ -6082,7 +6061,7 @@ var _elm_community$elm_webgl$Native_WebGL = function () {
     A2(_elm_lang$core$List$map, function (elem) {
       dataFill(array, attributeInfo.size, data_idx, elem, attribute.name);
       data_idx += attributeInfo.size * elem_length;
-    }, bufferElems);
+    }, _elm_lang$core$List$reverse(bufferElems));
 
     var buffer = gl.createBuffer();
     LOG('Created attribute buffer ' + attribute.name);
@@ -6118,6 +6097,30 @@ var _elm_community$elm_webgl$Native_WebGL = function () {
 
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indices, gl.STATIC_DRAW);
+
+    var bufferObject = {
+      numIndices: numIndices,
+      indexBuffer: indexBuffer,
+      buffers: buffers
+    };
+
+    return bufferObject;
+
+  }
+
+  function do_bind_setup_indexed(gl, indices) {
+    var buffers = {};
+
+    var numIndices = _elm_lang$core$List$length(indices);
+    var indexBuffer = gl.createBuffer();
+    LOG('Created index buffer');
+
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+    var ind = [];
+    A2(_elm_lang$core$List$map, function (elem) {
+      ind.push(elem);
+    }, indices);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, Uint16Array.from(ind), gl.STATIC_DRAW);
 
     var bufferObject = {
       numIndices: numIndices,
@@ -6205,7 +6208,11 @@ var _elm_community$elm_webgl$Native_WebGL = function () {
       var buffer = model.cache.buffers[render.buffer.guid];
 
       if (!buffer) {
-        buffer = do_bind_setup(gl, render.buffer._0, renderType.elemSize);
+        if (renderType.indexed) {
+          buffer = do_bind_setup_indexed(gl, render.buffer._0._1);
+        } else {
+          buffer = do_bind_setup(gl, render.buffer._0, renderType.elemSize);
+        }
         model.cache.buffers[render.buffer.guid] = buffer;
       }
 
@@ -6222,7 +6229,13 @@ var _elm_community$elm_webgl$Native_WebGL = function () {
         gl.enableVertexAttribArray(attribLocation);
 
         if (buffer.buffers[attribute.name] === undefined) {
-          buffer.buffers[attribute.name] = do_bind_attribute(gl, attribute, render.buffer._0, renderType.elemSize);
+          var bufferElems;
+          if (renderType.indexed) {
+            bufferElems = render.buffer._0._0, renderType.elemSize;
+          } else {
+            bufferElems = render.buffer._0, renderType.elemSize;
+          }
+          buffer.buffers[attribute.name] = do_bind_attribute(gl, attribute, bufferElems, renderType.elemSize);
         }
         var attributeBuffer = buffer.buffers[attribute.name];
         var attributeInfo = get_attribute_info(gl, attribute.type);
@@ -10238,6 +10251,9 @@ var _elm_community$elm_webgl$WebGL$render = _elm_community$elm_webgl$WebGL$rende
 		[]));
 var _elm_community$elm_webgl$WebGL$textureSize = _elm_community$elm_webgl$Native_WebGL.textureSize;
 var _elm_community$elm_webgl$WebGL$unsafeShader = _elm_community$elm_webgl$Native_WebGL.unsafeCoerceGLSL;
+var _elm_community$elm_webgl$WebGL$IndexedTriangles = function (a) {
+	return {ctor: 'IndexedTriangles', _0: a};
+};
 var _elm_community$elm_webgl$WebGL$TriangleStrip = function (a) {
 	return {ctor: 'TriangleStrip', _0: a};
 };
@@ -10357,398 +10373,6 @@ var _elm_community$elm_webgl$WebGL$Increment = {ctor: 'Increment'};
 var _elm_community$elm_webgl$WebGL$Replace = {ctor: 'Replace'};
 var _elm_community$elm_webgl$WebGL$None = {ctor: 'None'};
 var _elm_community$elm_webgl$WebGL$Keep = {ctor: 'Keep'};
-var _elm_lang$animation_frame$Native_AnimationFrame = function()
-{
-
-var hasStartTime =
-	window.performance &&
-	window.performance.timing &&
-	window.performance.timing.navigationStart;
-
-var navStart = hasStartTime
-	? window.performance.timing.navigationStart
-	: Date.now();
-
-var rAF = _elm_lang$core$Native_Scheduler.nativeBinding(function(callback)
-{
-	var id = requestAnimationFrame(function(time) {
-		var timeNow = time
-			? (time > navStart ? time : time + navStart)
-			: Date.now();
-
-		callback(_elm_lang$core$Native_Scheduler.succeed(timeNow));
-	});
-
-	return function() {
-		cancelAnimationFrame(id);
-	};
-});
-
-return {
-	rAF: rAF
-};
-
-}();
-//import Native.Scheduler //
-
-var _elm_lang$core$Native_Time = function() {
-
-var now = _elm_lang$core$Native_Scheduler.nativeBinding(function(callback)
-{
-	callback(_elm_lang$core$Native_Scheduler.succeed(Date.now()));
-});
-
-function setInterval_(interval, task)
-{
-	return _elm_lang$core$Native_Scheduler.nativeBinding(function(callback)
-	{
-		var id = setInterval(function() {
-			_elm_lang$core$Native_Scheduler.rawSpawn(task);
-		}, interval);
-
-		return function() { clearInterval(id); };
-	});
-}
-
-return {
-	now: now,
-	setInterval_: F2(setInterval_)
-};
-
-}();var _elm_lang$core$Time$setInterval = _elm_lang$core$Native_Time.setInterval_;
-var _elm_lang$core$Time$spawnHelp = F3(
-	function (router, intervals, processes) {
-		var _p0 = intervals;
-		if (_p0.ctor === '[]') {
-			return _elm_lang$core$Task$succeed(processes);
-		} else {
-			var _p1 = _p0._0;
-			return A2(
-				_elm_lang$core$Task$andThen,
-				_elm_lang$core$Native_Scheduler.spawn(
-					A2(
-						_elm_lang$core$Time$setInterval,
-						_p1,
-						A2(_elm_lang$core$Platform$sendToSelf, router, _p1))),
-				function (id) {
-					return A3(
-						_elm_lang$core$Time$spawnHelp,
-						router,
-						_p0._1,
-						A3(_elm_lang$core$Dict$insert, _p1, id, processes));
-				});
-		}
-	});
-var _elm_lang$core$Time$addMySub = F2(
-	function (_p2, state) {
-		var _p3 = _p2;
-		var _p6 = _p3._1;
-		var _p5 = _p3._0;
-		var _p4 = A2(_elm_lang$core$Dict$get, _p5, state);
-		if (_p4.ctor === 'Nothing') {
-			return A3(
-				_elm_lang$core$Dict$insert,
-				_p5,
-				_elm_lang$core$Native_List.fromArray(
-					[_p6]),
-				state);
-		} else {
-			return A3(
-				_elm_lang$core$Dict$insert,
-				_p5,
-				A2(_elm_lang$core$List_ops['::'], _p6, _p4._0),
-				state);
-		}
-	});
-var _elm_lang$core$Time$inMilliseconds = function (t) {
-	return t;
-};
-var _elm_lang$core$Time$millisecond = 1;
-var _elm_lang$core$Time$second = 1000 * _elm_lang$core$Time$millisecond;
-var _elm_lang$core$Time$minute = 60 * _elm_lang$core$Time$second;
-var _elm_lang$core$Time$hour = 60 * _elm_lang$core$Time$minute;
-var _elm_lang$core$Time$inHours = function (t) {
-	return t / _elm_lang$core$Time$hour;
-};
-var _elm_lang$core$Time$inMinutes = function (t) {
-	return t / _elm_lang$core$Time$minute;
-};
-var _elm_lang$core$Time$inSeconds = function (t) {
-	return t / _elm_lang$core$Time$second;
-};
-var _elm_lang$core$Time$now = _elm_lang$core$Native_Time.now;
-var _elm_lang$core$Time$onSelfMsg = F3(
-	function (router, interval, state) {
-		var _p7 = A2(_elm_lang$core$Dict$get, interval, state.taggers);
-		if (_p7.ctor === 'Nothing') {
-			return _elm_lang$core$Task$succeed(state);
-		} else {
-			return A2(
-				_elm_lang$core$Task$andThen,
-				_elm_lang$core$Time$now,
-				function (time) {
-					return A2(
-						_elm_lang$core$Task$andThen,
-						_elm_lang$core$Task$sequence(
-							A2(
-								_elm_lang$core$List$map,
-								function (tagger) {
-									return A2(
-										_elm_lang$core$Platform$sendToApp,
-										router,
-										tagger(time));
-								},
-								_p7._0)),
-						function (_p8) {
-							return _elm_lang$core$Task$succeed(state);
-						});
-				});
-		}
-	});
-var _elm_lang$core$Time$subscription = _elm_lang$core$Native_Platform.leaf('Time');
-var _elm_lang$core$Time$State = F2(
-	function (a, b) {
-		return {taggers: a, processes: b};
-	});
-var _elm_lang$core$Time$init = _elm_lang$core$Task$succeed(
-	A2(_elm_lang$core$Time$State, _elm_lang$core$Dict$empty, _elm_lang$core$Dict$empty));
-var _elm_lang$core$Time$onEffects = F3(
-	function (router, subs, _p9) {
-		var _p10 = _p9;
-		var rightStep = F3(
-			function (_p12, id, _p11) {
-				var _p13 = _p11;
-				return {
-					ctor: '_Tuple3',
-					_0: _p13._0,
-					_1: _p13._1,
-					_2: A2(
-						_elm_lang$core$Task$andThen,
-						_elm_lang$core$Native_Scheduler.kill(id),
-						function (_p14) {
-							return _p13._2;
-						})
-				};
-			});
-		var bothStep = F4(
-			function (interval, taggers, id, _p15) {
-				var _p16 = _p15;
-				return {
-					ctor: '_Tuple3',
-					_0: _p16._0,
-					_1: A3(_elm_lang$core$Dict$insert, interval, id, _p16._1),
-					_2: _p16._2
-				};
-			});
-		var leftStep = F3(
-			function (interval, taggers, _p17) {
-				var _p18 = _p17;
-				return {
-					ctor: '_Tuple3',
-					_0: A2(_elm_lang$core$List_ops['::'], interval, _p18._0),
-					_1: _p18._1,
-					_2: _p18._2
-				};
-			});
-		var newTaggers = A3(_elm_lang$core$List$foldl, _elm_lang$core$Time$addMySub, _elm_lang$core$Dict$empty, subs);
-		var _p19 = A6(
-			_elm_lang$core$Dict$merge,
-			leftStep,
-			bothStep,
-			rightStep,
-			newTaggers,
-			_p10.processes,
-			{
-				ctor: '_Tuple3',
-				_0: _elm_lang$core$Native_List.fromArray(
-					[]),
-				_1: _elm_lang$core$Dict$empty,
-				_2: _elm_lang$core$Task$succeed(
-					{ctor: '_Tuple0'})
-			});
-		var spawnList = _p19._0;
-		var existingDict = _p19._1;
-		var killTask = _p19._2;
-		return A2(
-			_elm_lang$core$Task$andThen,
-			killTask,
-			function (_p20) {
-				return A2(
-					_elm_lang$core$Task$andThen,
-					A3(_elm_lang$core$Time$spawnHelp, router, spawnList, existingDict),
-					function (newProcesses) {
-						return _elm_lang$core$Task$succeed(
-							A2(_elm_lang$core$Time$State, newTaggers, newProcesses));
-					});
-			});
-	});
-var _elm_lang$core$Time$Every = F2(
-	function (a, b) {
-		return {ctor: 'Every', _0: a, _1: b};
-	});
-var _elm_lang$core$Time$every = F2(
-	function (interval, tagger) {
-		return _elm_lang$core$Time$subscription(
-			A2(_elm_lang$core$Time$Every, interval, tagger));
-	});
-var _elm_lang$core$Time$subMap = F2(
-	function (f, _p21) {
-		var _p22 = _p21;
-		return A2(
-			_elm_lang$core$Time$Every,
-			_p22._0,
-			function (_p23) {
-				return f(
-					_p22._1(_p23));
-			});
-	});
-_elm_lang$core$Native_Platform.effectManagers['Time'] = {pkg: 'elm-lang/core', init: _elm_lang$core$Time$init, onEffects: _elm_lang$core$Time$onEffects, onSelfMsg: _elm_lang$core$Time$onSelfMsg, tag: 'sub', subMap: _elm_lang$core$Time$subMap};
-var _elm_lang$core$Process$kill = _elm_lang$core$Native_Scheduler.kill;
-var _elm_lang$core$Process$sleep = _elm_lang$core$Native_Scheduler.sleep;
-var _elm_lang$core$Process$spawn = _elm_lang$core$Native_Scheduler.spawn;
-var _elm_lang$animation_frame$AnimationFrame$rAF = _elm_lang$animation_frame$Native_AnimationFrame.rAF;
-var _elm_lang$animation_frame$AnimationFrame$subscription = _elm_lang$core$Native_Platform.leaf('AnimationFrame');
-var _elm_lang$animation_frame$AnimationFrame$State = F3(
-	function (a, b, c) {
-		return {subs: a, request: b, oldTime: c};
-	});
-var _elm_lang$animation_frame$AnimationFrame$init = _elm_lang$core$Task$succeed(
-	A3(
-		_elm_lang$animation_frame$AnimationFrame$State,
-		_elm_lang$core$Native_List.fromArray(
-			[]),
-		_elm_lang$core$Maybe$Nothing,
-		0));
-var _elm_lang$animation_frame$AnimationFrame$onEffects = F3(
-	function (router, subs, _p0) {
-		var _p1 = _p0;
-		var _p5 = _p1.request;
-		var _p4 = _p1.oldTime;
-		var _p2 = {ctor: '_Tuple2', _0: _p5, _1: subs};
-		if (_p2._0.ctor === 'Nothing') {
-			if (_p2._1.ctor === '[]') {
-				return _elm_lang$core$Task$succeed(
-					A3(
-						_elm_lang$animation_frame$AnimationFrame$State,
-						_elm_lang$core$Native_List.fromArray(
-							[]),
-						_elm_lang$core$Maybe$Nothing,
-						_p4));
-			} else {
-				return A2(
-					_elm_lang$core$Task$andThen,
-					_elm_lang$core$Process$spawn(
-						A2(
-							_elm_lang$core$Task$andThen,
-							_elm_lang$animation_frame$AnimationFrame$rAF,
-							_elm_lang$core$Platform$sendToSelf(router))),
-					function (pid) {
-						return A2(
-							_elm_lang$core$Task$andThen,
-							_elm_lang$core$Time$now,
-							function (time) {
-								return _elm_lang$core$Task$succeed(
-									A3(
-										_elm_lang$animation_frame$AnimationFrame$State,
-										subs,
-										_elm_lang$core$Maybe$Just(pid),
-										time));
-							});
-					});
-			}
-		} else {
-			if (_p2._1.ctor === '[]') {
-				return A2(
-					_elm_lang$core$Task$andThen,
-					_elm_lang$core$Process$kill(_p2._0._0),
-					function (_p3) {
-						return _elm_lang$core$Task$succeed(
-							A3(
-								_elm_lang$animation_frame$AnimationFrame$State,
-								_elm_lang$core$Native_List.fromArray(
-									[]),
-								_elm_lang$core$Maybe$Nothing,
-								_p4));
-					});
-			} else {
-				return _elm_lang$core$Task$succeed(
-					A3(_elm_lang$animation_frame$AnimationFrame$State, subs, _p5, _p4));
-			}
-		}
-	});
-var _elm_lang$animation_frame$AnimationFrame$onSelfMsg = F3(
-	function (router, newTime, _p6) {
-		var _p7 = _p6;
-		var _p10 = _p7.subs;
-		var diff = newTime - _p7.oldTime;
-		var send = function (sub) {
-			var _p8 = sub;
-			if (_p8.ctor === 'Time') {
-				return A2(
-					_elm_lang$core$Platform$sendToApp,
-					router,
-					_p8._0(newTime));
-			} else {
-				return A2(
-					_elm_lang$core$Platform$sendToApp,
-					router,
-					_p8._0(diff));
-			}
-		};
-		return A2(
-			_elm_lang$core$Task$andThen,
-			_elm_lang$core$Process$spawn(
-				A2(
-					_elm_lang$core$Task$andThen,
-					_elm_lang$animation_frame$AnimationFrame$rAF,
-					_elm_lang$core$Platform$sendToSelf(router))),
-			function (pid) {
-				return A2(
-					_elm_lang$core$Task$andThen,
-					_elm_lang$core$Task$sequence(
-						A2(_elm_lang$core$List$map, send, _p10)),
-					function (_p9) {
-						return _elm_lang$core$Task$succeed(
-							A3(
-								_elm_lang$animation_frame$AnimationFrame$State,
-								_p10,
-								_elm_lang$core$Maybe$Just(pid),
-								newTime));
-					});
-			});
-	});
-var _elm_lang$animation_frame$AnimationFrame$Diff = function (a) {
-	return {ctor: 'Diff', _0: a};
-};
-var _elm_lang$animation_frame$AnimationFrame$diffs = function (tagger) {
-	return _elm_lang$animation_frame$AnimationFrame$subscription(
-		_elm_lang$animation_frame$AnimationFrame$Diff(tagger));
-};
-var _elm_lang$animation_frame$AnimationFrame$Time = function (a) {
-	return {ctor: 'Time', _0: a};
-};
-var _elm_lang$animation_frame$AnimationFrame$times = function (tagger) {
-	return _elm_lang$animation_frame$AnimationFrame$subscription(
-		_elm_lang$animation_frame$AnimationFrame$Time(tagger));
-};
-var _elm_lang$animation_frame$AnimationFrame$subMap = F2(
-	function (func, sub) {
-		var _p11 = sub;
-		if (_p11.ctor === 'Time') {
-			return _elm_lang$animation_frame$AnimationFrame$Time(
-				function (_p12) {
-					return func(
-						_p11._0(_p12));
-				});
-		} else {
-			return _elm_lang$animation_frame$AnimationFrame$Diff(
-				function (_p13) {
-					return func(
-						_p11._0(_p13));
-				});
-		}
-	});
-_elm_lang$core$Native_Platform.effectManagers['AnimationFrame'] = {pkg: 'elm-lang/animation-frame', init: _elm_lang$animation_frame$AnimationFrame$init, onEffects: _elm_lang$animation_frame$AnimationFrame$onEffects, onSelfMsg: _elm_lang$animation_frame$AnimationFrame$onSelfMsg, tag: 'sub', subMap: _elm_lang$animation_frame$AnimationFrame$subMap};
 var _elm_lang$html$Html_App$programWithFlags = _elm_lang$virtual_dom$VirtualDom$programWithFlags;
 var _elm_lang$html$Html_App$program = function (app) {
 	return _elm_lang$html$Html_App$programWithFlags(
@@ -11139,32 +10763,20 @@ var _elm_lang$html$Html_Attributes$classList = function (list) {
 var _elm_lang$html$Html_Attributes$style = _elm_lang$virtual_dom$VirtualDom$style;
 var _user$project$Main$fragmentShader = {'src': '\n  precision mediump float;\n\n  void main () {\n      gl_FragColor = vec4(1, 1, 1, 1);\n  }\n\n'};
 var _user$project$Main$vertexShader = {'src': '\n  precision mediump float;\n  attribute vec3 position;\n  uniform vec3 displacement;\n\n  void main() {\n    gl_Position = vec4(0.3 * (position + displacement), 1);\n  }\n'};
-var _user$project$Main$square = _elm_community$elm_webgl$WebGL$Triangle(
+var _user$project$Main$square = _elm_community$elm_webgl$WebGL$TriangleStrip(
 	_elm_lang$core$Native_List.fromArray(
 		[
 			{
-			ctor: '_Tuple3',
-			_0: {
-				position: A3(_elm_community$elm_linear_algebra$Math_Vector3$vec3, 1, 1, 0)
-			},
-			_1: {
-				position: A3(_elm_community$elm_linear_algebra$Math_Vector3$vec3, -1, 1, 0)
-			},
-			_2: {
-				position: A3(_elm_community$elm_linear_algebra$Math_Vector3$vec3, 1, -1, 0)
-			}
+			position: A3(_elm_community$elm_linear_algebra$Math_Vector3$vec3, 1, 1, 0)
 		},
 			{
-			ctor: '_Tuple3',
-			_0: {
-				position: A3(_elm_community$elm_linear_algebra$Math_Vector3$vec3, -1, 1, 0)
-			},
-			_1: {
-				position: A3(_elm_community$elm_linear_algebra$Math_Vector3$vec3, 1, -1, 0)
-			},
-			_2: {
-				position: A3(_elm_community$elm_linear_algebra$Math_Vector3$vec3, -1, -1, 0)
-			}
+			position: A3(_elm_community$elm_linear_algebra$Math_Vector3$vec3, -1, 1, 0)
+		},
+			{
+			position: A3(_elm_community$elm_linear_algebra$Math_Vector3$vec3, 1, -1, 0)
+		},
+			{
+			position: A3(_elm_community$elm_linear_algebra$Math_Vector3$vec3, -1, -1, 0)
 		}
 		]));
 var _user$project$Main$triangle = _elm_community$elm_webgl$WebGL$Triangle(
@@ -11204,7 +10816,7 @@ var _user$project$Main$main = {
 					_elm_community$elm_webgl$WebGL$render,
 					_user$project$Main$vertexShader,
 					_user$project$Main$fragmentShader,
-					_user$project$Main$triangle,
+					_user$project$Main$square,
 					{
 						displacement: A3(_elm_community$elm_linear_algebra$Math_Vector3$vec3, -1.5, 0, 0)
 					})
@@ -11215,7 +10827,7 @@ var _user$project$Main$main = {
 					_elm_community$elm_webgl$WebGL$render,
 					_user$project$Main$vertexShader,
 					_user$project$Main$fragmentShader,
-					_user$project$Main$square,
+					_user$project$Main$triangle,
 					{
 						displacement: A3(_elm_community$elm_linear_algebra$Math_Vector3$vec3, 1.5, 0, 0)
 					})
