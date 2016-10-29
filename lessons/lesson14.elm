@@ -24,42 +24,40 @@ type alias Vertex = { position : Vec3, coord: Vec3, normal: Vec3 }
 
 type alias Model =
   { texture : Maybe Texture
-  , keys : Keys
   , position: Vec3
-  , facing: Vec3
-  , upwardsAngle: Float
-  , joggingPhase: Float
   , world: Drawable Vertex
+  , useLighting: Bool
+  , useSpecular: Bool
+  , ambientColourText: {x:String, y:String, z:String}
+  , ambientColour: Vec3
+  , pointText: {x:String, y:String, z:String}
+  , point: Vec3
+  , pointColourText: {x:String, y:String, z:String}
+  , pointColour: Vec3
+  , theta : Float
   }
 
 type Action
   = TexturesError Error
   | TexturesLoaded (Maybe Texture)
-  | KeyChange (Keys -> Keys)
   | Animate Time
   | FetchFail Http.Error
   | FetchSucceed (Drawable Vertex )
 
-type alias Keys =
-  { left : Bool
-  , right : Bool
-  , up : Bool
-  , down : Bool
-  , w : Bool
-  , s : Bool
-  , a : Bool
-  , d : Bool
-  }
-
 init : (Model, Cmd Action)
 init =
   ( {texture = Nothing
-  , position = vec3 0 0.5 10
-  , facing = vec3 0 0 -1
-  , joggingPhase = 0
-  , upwardsAngle = 0
-  , keys = Keys False False False False False False False False
+  , position = vec3 0 0 0
   , world = Triangle []
+  , useLighting = True
+  , useSpecular = True
+  , pointColourText = {x="1", y="1", z="1"}
+  , ambientColour = (vec3 0.5 0.5 0.5)
+  , pointText = {x="0", y="0", z="0"}
+  , point = (vec3 -10 4 20)
+  , pointColour = (vec3 1 1 1)
+  , ambientColourText = {x="0.2", y="0.2", z="0.2"}
+  , theta = 0
   }
   , Cmd.batch[ fetchTexture |> Task.perform TexturesError TexturesLoaded
              , fetchWorld
@@ -87,30 +85,12 @@ makeVec3 coords =
 --getWorld : World -> Task Http.Error (Drawable)
 getWorld { vertexPositions, vertexNormals, vertexTextureCoords, indices} =
   let
-    vertexes = List.map3 (\a b c -> { position = makeVec3 a, coord = makeVec3 b, normal = makeVec3 c}) (greedyGroupsOf 3 vertexPositions) (greedyGroupsOf 2 vertexTextureCoords) (greedyGroupsOf 2 vertexNormals)
-    a =  Debug.log "a" (List.length vertexes)
-    b =  Debug.log "b" (List.length indices)
-    n =  Debug.log "n" (List.length vertexNormals)
-    p =  Debug.log "p" (List.length vertexPositions)
-    c =  Debug.log "c" (List.length vertexTextureCoords)
+    vertexes = List.map3 (\a b c -> { position = makeVec3 a, coord = makeVec3 b, normal = makeVec3 c}) (greedyGroupsOf 3 vertexPositions) (greedyGroupsOf 2 vertexTextureCoords) (greedyGroupsOf 3 vertexNormals)
   in
-    Task.succeed (WebGL.IndexedTriangles ( List.reverse vertexes, indices))
-    -- Task.succeed   (WebGL.IndexedTriangles
-    -- ( [ { position = vec3 -1 1 1, coord = vec3 0 0 0, normal = vec3 0 0 0 }
-    --   , { position = vec3 1 1 1, coord = vec3 0 0 0, normal = vec3 0 0 0 }
-    --   , { position = vec3 1 1 -1, coord = vec3 0 0 0, normal = vec3 0 0 0 }
-    --   , { position = vec3 -1 1 -1, coord = vec3 0 0 0, normal = vec3 0 0 0 }
-    --   , { position = vec3 0 -1 0, coord = vec3 0 0 0, normal = vec3 0 0 0 }
-    --   ]
-    -- , [ 0, 1, 3
-    --   , 1, 2, 3
-    --   , 3, 2, 4
-    --   , 2, 1, 4
-    --   , 0, 1, 4
-    --   , 3, 0, 4]
-    -- ))
+--    Task.succeed (sphere)
+    Task.succeed (WebGL.IndexedTriangles ( vertexes, indices))
 
-worldDecoder = object4 World ("vertexPositions" := list float) ("vertexTextureCoords" := list float) ("vertexTextureCoords" := list float) ("indices" := list int)
+worldDecoder = object4 World ("vertexPositions" := list float) ("vertexNormals" := list float) ("vertexTextureCoords" := list float) ("indices" := list int)
 
 fetchTexture : Task Error (Maybe Texture)
 fetchTexture =
@@ -128,75 +108,10 @@ update action model =
       (model, Cmd.none)
     TexturesLoaded texture ->
       ({model | texture = texture}, Cmd.none)
-    KeyChange keyfunc ->
-      ({model | keys = keyfunc model.keys}, Cmd.none)
     Animate dt ->
-      ( { model
-        | position = model.position
-          |> move (dt/500) model.keys model.facing model.joggingPhase
-        , facing = model.facing
-          |> rotateY dt model.keys
-        , upwardsAngle = model.upwardsAngle
-          |> rotateX dt model.keys
-        , joggingPhase = model.joggingPhase
-          |> updateJoggingPhase dt model.keys
-        }
+      ( { model | theta = model.theta + dt / 1000 }
         , Cmd.none
       )
-
-updateJoggingPhase : Float -> {keys| a: Bool, s: Bool, w: Bool, d: Bool} -> Float -> Float
-updateJoggingPhase dt k phase =
-  case (k.a, k.s, k.d, k.w) of
-    (False, False, False, False) -> phase
-    (True, True, True, True) -> phase
-    (True, True, False, False) -> phase
-    (False, False, True, True) -> phase
-    _ -> phase + dt/100
-
-rotateX : Float -> {keys| up: Bool, down: Bool} -> Float -> Float
-rotateX dt k upwardsAngle =
-  let
-    direction =
-      case (k.up, k.down) of
-        (True, False) -> 1
-        (False, True) -> -1
-        _ -> 0
-  in
-    addWithCap 89 -89 upwardsAngle (direction * dt/10)
-
-addWithCap : Float -> Float -> Float -> Float -> Float
-addWithCap max min value toAdd =
-  if value >= max && toAdd > 0 then max
-  else if value <= min && toAdd < 0 then min
-  else value + toAdd
-
-rotateY : Float -> {keys| left: Bool, right: Bool} -> Vec3 -> Vec3
-rotateY dt k facing =
-  let
-    direction =
-      case (k.left, k.right) of
-        (True, False) -> 1
-        (False, True) -> -1
-        _ -> 0
-  in
-     transform (makeRotate (direction * dt/1000) j) facing
-
-move : Float -> {keys| w: Bool, s: Bool, a: Bool, d: Bool} -> Vec3 -> Float -> Vec3-> Vec3
-move dt k facing joggingPhase position =
-  let
-    forward =
-      case (k.w, k.s) of
-        (True, False) -> 1 * dt
-        (False, True) -> -1 * dt
-        _ -> 0
-    strafe =
-      case (k.a, k.d) of
-        (True, False) -> -2 * dt
-        (False, True) -> 2 * dt
-        _ -> 0
-  in
-     setY (0.5 + (sin joggingPhase) * 0.05) (position `add` (Math.Vector3.scale strafe (facing `cross` j)) `add` (Math.Vector3.scale forward facing) )
-
 
 main : Program Never
 main =
@@ -210,93 +125,130 @@ main =
 subscriptions : Model -> Sub Action
 subscriptions _ =
   [ AnimationFrame.diffs Animate
-  , Keyboard.downs (keyChange True)
-  , Keyboard.ups (keyChange False)
   ]
   |> Sub.batch
-
-keyChange : Bool -> Keyboard.KeyCode -> Action
-keyChange on keyCode =
-  (case keyCode of
-    38 -> \k -> {k | up = on}
-    40 -> \k -> {k | down = on}
-    39 -> \k -> {k | right = on}
-    37 -> \k -> {k | left = on}
-    87 -> \k -> {k | w = on}
-    83 -> \k -> {k | s = on}
-    65 -> \k -> {k | a = on}
-    68 -> \k -> {k | d = on}
-    _ -> Basics.identity
-  ) |> KeyChange
 
 -- VIEW
 
 view : Model -> Html Action
-view { texture, world, position, facing, upwardsAngle } =
-  let a = Debug.log "a" world
-  in
-    div
-      []
-      [ WebGL.toHtml
-          [ width 500, height 500, style [("backgroundColor", "black")]  ]
-          ( renderEntity world texture position facing upwardsAngle)
-      , div
-          [ style
-              [ ("font-family", "monospace")
-              , ("left", "20px")
-              , ("right", "20px")
-              , ("top", "500px")
-              ]
-          ]
-          [ text message ]
-      ]
+view { texture, theta, world, position, useLighting, useSpecular, pointColour, point, ambientColour } =
+  div
+    []
+    [ WebGL.toHtml
+        [ width 500, height 500, style [("backgroundColor", "black")]  ]
+        ( renderEntity world theta texture position useLighting useSpecular pointColour point ambientColour )
+    , div
+        [ style
+            [ ("font-family", "monospace")
+            , ("left", "20px")
+            , ("right", "20px")
+            , ("top", "500px")
+            ]
+        ]
+        [ text message ]
+    ]
 
 message : String
 message =
     "Up/Down/Left/Right turn head, w/a/s/d -> move around"
 
-renderEntity : Drawable { position:Vec3, coord:Vec3, normal:Vec3 } -> Maybe Texture -> Vec3 -> Vec3 -> Float -> List Renderable
-renderEntity world texture position facing upwardsAngle =
+renderEntity : Drawable { position:Vec3, coord:Vec3, normal:Vec3 } -> Float -> Maybe Texture -> Vec3 -> Bool -> Bool -> Vec3 -> Vec3 -> Vec3 -> List Renderable
+renderEntity world theta texture position useLighting useSpecular pointColour point ambientColour  =
   case texture of
     Nothing ->
      []
     Just tex ->
-     [render vertexShader fragmentShader world (uniforms tex position facing upwardsAngle)]
+     [render vertexShader fragmentShader world (uniforms tex theta position useLighting useSpecular pointColour point ambientColour )]
 
-uniforms : Texture -> Vec3 -> Vec3 -> Float -> { texture:Texture, perspective:Mat4, camera:Mat4, worldSpace: Mat4 }
-uniforms texture position facing upwardsAngle =
-  { texture = texture
-  , worldSpace = makeTranslate (vec3 0 0 0)
-  , camera = makeLookAt position (position `add` (transform (makeRotate (degrees upwardsAngle) (facing `cross` j)) facing)) j
-  , perspective = makePerspective 45 1 0.01 100
-  }
+uniforms : Texture -> Float -> Vec3 -> Bool -> Bool -> Vec3 -> Vec3 -> Vec3 -> { texture:Texture, perspective:Mat4, camera:Mat4, worldSpace: Mat4, useLighting: Bool, normalMatrix: Mat4, useSpecular: Bool, pointColour: Vec3, ambientColour: Vec3, point: Vec3}
+uniforms texture theta position useLighting useSpecular pointColour point ambientColour =
+  let
+    worldSpace = (translate position (rotate (degrees 23.4) (vec3 1 0 1) (makeRotate theta (vec3 0 1 0) )))
+    camera = makeLookAt (vec3 0 0 50) (vec3 0 0 -1) (vec3 0 1 0)
+    perspective = makePerspective 45 1 0.1 100
+  in
+    { texture = texture
+    , worldSpace = worldSpace
+    , camera = camera
+    , perspective = perspective
+    , normalMatrix = transpose(inverseOrthonormal( worldSpace ))
+    , useLighting = useLighting
+    , useSpecular = useSpecular
+    , pointColour = pointColour
+    , ambientColour = ambientColour
+    , point = point
+    }
 
 -- SHADERS
-
-vertexShader : Shader { attr| position:Vec3, coord:Vec3 } { unif | worldSpace:Mat4, perspective:Mat4, camera:Mat4} { vcoord:Vec2 }
+vertexShader : Shader { attr| position:Vec3, coord:Vec3, normal:Vec3 } { unif | worldSpace:Mat4, perspective:Mat4, camera:Mat4, normalMatrix:Mat4 } { vcoord:Vec2, vPosition:Vec3, vTransformedNormal:Vec3 }
 vertexShader = [glsl|
 
   precision mediump float;
+
   attribute vec3 position;
   attribute vec3 coord;
+  attribute vec3 normal;
+
   uniform mat4 worldSpace;
   uniform mat4 perspective;
+  uniform mat4 normalMatrix;
   uniform mat4 camera;
+
   varying vec2 vcoord;
+  varying vec3 vPosition;
+  varying vec3 vTransformedNormal;
 
   void main() {
-    gl_Position = perspective * camera * worldSpace * vec4(position, 1.0);
+    vec4 v4Position = camera * worldSpace * vec4(position, 1.0);
+    gl_Position = perspective * v4Position;
+    vPosition =  vec3(v4Position);
     vcoord = coord.xy;
+    vTransformedNormal = vec3(normalMatrix * vec4(normal, 0.0));
   }
 |]
 
-fragmentShader : Shader {} { unif | texture:Texture } { vcoord:Vec2 }
+fragmentShader : Shader {} { unif | texture:Texture, useSpecular: Bool, useLighting:Bool, ambientColour:Vec3, pointColour:Vec3, point:Vec3 } { vcoord:Vec2, vPosition:Vec3, vTransformedNormal:Vec3 }
 fragmentShader = [glsl|
   precision mediump float;
+
   uniform sampler2D texture;
+  uniform bool useLighting;
+  uniform bool useSpecular;
+  uniform vec3 ambientColour;
+  uniform vec3 pointColour;
+  uniform vec3 point;
+
   varying vec2 vcoord;
+  varying vec3 vPosition;
+  varying vec3 vTransformedNormal;
 
   void main () {
-      gl_FragColor = texture2D(texture, vcoord);
+      vec3 lightWeighting;
+      lightWeighting = vec3(1.0, 1.0, 1.0);
+      if (!useLighting) {
+        lightWeighting = vec3(1.0, 1.0, 1.0);
+      } else {
+
+        vec3 lightDirection = normalize(point - vPosition);
+        vec3 normal = normalize(vTransformedNormal);
+
+        float specularLightWeighting = 0.0;
+        if (useSpecular) {
+            vec3 eyeDirection = normalize(-vPosition.xyz);
+            vec3 reflectionDirection = reflect(-lightDirection, normal);
+
+            specularLightWeighting = pow(max(dot(reflectionDirection, eyeDirection), 0.0), 32.0);
+        }
+
+        float diffuseLightWeighting = max(dot(normal, lightDirection), 0.0);
+        lightWeighting = ambientColour
+            + pointColour * specularLightWeighting
+            + ambientColour * diffuseLightWeighting;
+      }
+      vec4 fragmentColor;
+      fragmentColor = texture2D(texture, vec2(vcoord.s, vcoord.t));
+      gl_FragColor = vec4(fragmentColor.rgb * lightWeighting, fragmentColor.a);
   }
+
+
 |]
