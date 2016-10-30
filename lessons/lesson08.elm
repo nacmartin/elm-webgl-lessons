@@ -24,6 +24,7 @@ type alias Model =
   , lighting: Bool
   , blending: Bool
   , alpha: Float
+  , alphaText: String
   , directionalColourText: {x:String, y:String, z:String}
   , directionalColour: Vec3
   , ambientColourText: {x:String, y:String, z:String}
@@ -78,6 +79,7 @@ init =
   , lighting = True
   , blending = True
   , alpha = 0.5
+  , alphaText = "0.5"
   , directionalColourText = {x="0.8", y="0.2", z="0.2"}
   , directionalColour = (vec3 0.8 0.2 0.2)
   , ambientColourText = {x="0.2", y="0.2", z="0.9"}
@@ -128,7 +130,7 @@ update action model =
                     Ok value -> value
                     _ -> model.alpha
         in
-           ( { model | alpha = parsed }, Cmd.none )
+           ( { model | alpha = parsed, alphaText = value }, Cmd.none )
     ChangeDirectionalX value ->
         let
             (numeric, textual) = updateAndParseX model.directional model.directionalText value
@@ -298,7 +300,7 @@ face =
 -- VIEW
 
 view : Model -> Html Action
-view {texture, thetaX, thetaY, position, rx, ry, lighting, alpha, blending, directionalColour, directional, ambientColour, directionalColourText, ambientColourText, directionalText} =
+view {texture, thetaX, thetaY, position, rx, ry, lighting, alpha, blending, directionalColour, directional, ambientColour, directionalColourText, ambientColourText, directionalText, alphaText} =
   let
     entities = renderEntity cube thetaX thetaY texture position lighting blending alpha directionalColour directional ambientColour
   in
@@ -322,7 +324,7 @@ view {texture, thetaX, thetaY, position, rx, ry, lighting, alpha, blending, dire
           ]
         , div []
           [ text "Alpha level:"
-          , input [type' "text", step "0.01", onInput ChangeAlpha, value (toString alpha)] []
+          , input [type' "text", step "0.01", onInput ChangeAlpha, value alphaText] []
           ]
         , div []
           [ h2 [] [ text "Directional Light"]
