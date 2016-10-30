@@ -14,3 +14,5 @@ elm-reactor
 `````
 
 And point your browser to [localhost:8000](http://localhost:8000)
+
+Note that at the moment you will need [this fork](https://github.com/nacmartin/elm-webgl/tree/indexed-triangles) of elm-webgl, since I have added some features to the library, that have not been merged yet.
