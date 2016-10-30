@@ -1,3 +1,5 @@
+module Main exposing (..)
+
 import Debug
 import Keyboard
 import Math.Vector2 exposing (Vec2)
@@ -13,266 +15,344 @@ import Random
 import Array
 import Html.Attributes exposing (width, height, style)
 
-effectiveFPMS = 30.0 / 10000.0
+
+effectiveFPMS =
+    30.0 / 10000.0
+
 
 type alias Model =
-  { texture : Maybe Texture
-  , stars: List Star
-  , keys : Keys
-  , position: Vec3
-  , tilt: Float
-  , spin: Float
-  }
+    { texture : Maybe Texture
+    , stars : List Star
+    , keys : Keys
+    , position : Vec3
+    , tilt : Float
+    , spin : Float
+    }
+
 
 type alias Star =
-  { dist: Float
-  , color: Vec3
-  , rotationSpeed: Float
-  , angle: Float
-  }
+    { dist : Float
+    , color : Vec3
+    , rotationSpeed : Float
+    , angle : Float
+    }
+
 
 type Action
-  = TexturesError Error
-  | TexturesLoaded (Maybe Texture)
-  | KeyChange (Keys -> Keys)
-  | Animate Time
-  | RandomColorGenerated RandomColor
+    = TexturesError Error
+    | TexturesLoaded (Maybe Texture)
+    | KeyChange (Keys -> Keys)
+    | Animate Time
+    | RandomColorGenerated RandomColor
+
 
 type alias RandomColor =
-  { idx : Int, component: Int, value: Float }
+    { idx : Int, component : Int, value : Float }
+
 
 type alias Keys =
-  { left : Bool
-  , right : Bool
-  , up : Bool
-  , down : Bool
-  , w : Bool
-  , s : Bool
-  }
+    { left : Bool
+    , right : Bool
+    , up : Bool
+    , down : Bool
+    , w : Bool
+    , s : Bool
+    }
 
-init : (Model, Cmd Action)
+
+init : ( Model, Cmd Action )
 init =
-  ( {texture = Nothing
-  , tilt = degrees 90
-  , spin = 0
-  , position = vec3 0 0 20
-  , stars = (initStars 50)
-  , keys = Keys False False False False False False
-  }
-  , Cmd.batch[ fetchTexture |> Task.perform TexturesError TexturesLoaded, randomColors 50]
-  )
+    ( { texture = Nothing
+      , tilt = degrees 90
+      , spin = 0
+      , position = vec3 0 0 20
+      , stars = (initStars 50)
+      , keys = Keys False False False False False False
+      }
+    , Cmd.batch [ fetchTexture |> Task.perform TexturesError TexturesLoaded, randomColors 50 ]
+    )
+
 
 initStars : Int -> List Star
 initStars num =
-  List.map (initStar num) [1..num]
+    List.map (initStar num) [1..num]
+
 
 initStar : Int -> Int -> Star
 initStar total index =
-  { angle = 0.0
-  , dist = 5.0 * toFloat(index) / toFloat(total)
-  , rotationSpeed = toFloat(index) / toFloat(total)
-  , color = vec3 1.0 1.0 1.0
-  }
+    { angle = 0.0
+    , dist = 5.0 * toFloat (index) / toFloat (total)
+    , rotationSpeed = toFloat (index) / toFloat (total)
+    , color = vec3 1.0 1.0 1.0
+    }
 
-generator = Random.float 0 1
+
+generator =
+    Random.float 0 1
+
 
 randomColors : Int -> Cmd Action
 randomColors total =
     Cmd.batch (List.concat (List.map (\c -> (List.map (\idx -> randomColor idx c) [0..total])) [0..2]))
 
+
 randomColor : Int -> Int -> Cmd Action
 randomColor starIdx component =
-  (Random.generate (\res -> RandomColorGenerated {idx= starIdx, component= component, value= res }) generator)
+    (Random.generate (\res -> RandomColorGenerated { idx = starIdx, component = component, value = res }) generator)
 
 
 fetchTexture : Task Error (Maybe Texture)
 fetchTexture =
-  loadTextureWithFilter WebGL.Linear "textures/star.gif" `Task.andThen` \linearTexture ->
-  Task.succeed (Just linearTexture)
+    loadTextureWithFilter WebGL.Linear "textures/star.gif"
+        `Task.andThen`
+            \linearTexture ->
+                Task.succeed (Just linearTexture)
 
-update : Action -> Model -> (Model, Cmd Action)
+
+update : Action -> Model -> ( Model, Cmd Action )
 update action model =
-  case action of
-    TexturesError err ->
-      (model, Cmd.none)
-    TexturesLoaded texture ->
-      ({model | texture = texture}, Cmd.none)
-    KeyChange keyfunc ->
-      ({model | keys = keyfunc model.keys}, Cmd.none)
-    Animate dt ->
-      ( { model
-        | position = model.position
-            |> move model.keys
-        , tilt = model.tilt
-            |> rotateX model.keys
-        , spin = model.spin + 0.1
-        , stars = List.map (updateStar dt) model.stars
-        }
-        , Cmd.none
-      )
-    RandomColorGenerated randomColor ->
-      ({model| stars = (replaceColorStars randomColor model.stars) }, Cmd.none)
+    case action of
+        TexturesError err ->
+            ( model, Cmd.none )
+
+        TexturesLoaded texture ->
+            ( { model | texture = texture }, Cmd.none )
+
+        KeyChange keyfunc ->
+            ( { model | keys = keyfunc model.keys }, Cmd.none )
+
+        Animate dt ->
+            ( { model
+                | position =
+                    model.position
+                        |> move model.keys
+                , tilt =
+                    model.tilt
+                        |> rotateX model.keys
+                , spin = model.spin + 0.1
+                , stars = List.map (updateStar dt) model.stars
+              }
+            , Cmd.none
+            )
+
+        RandomColorGenerated randomColor ->
+            ( { model | stars = (replaceColorStars randomColor model.stars) }, Cmd.none )
+
 
 replaceColorStars : RandomColor -> List Star -> List Star
-replaceColorStars {idx, component, value} stars =
-  let
-    newStar = get idx stars
-  in
-    case newStar of
-      Nothing -> stars
-      Just someStar ->
-        updateStarInList stars idx (replaceColor component value someStar)
+replaceColorStars { idx, component, value } stars =
+    let
+        newStar =
+            get idx stars
+    in
+        case newStar of
+            Nothing ->
+                stars
 
-get n xs = List.head (List.drop n xs)
+            Just someStar ->
+                updateStarInList stars idx (replaceColor component value someStar)
+
+
+get n xs =
+    List.head (List.drop n xs)
+
 
 replaceColor : Int -> Float -> Star -> Star
 replaceColor component value star =
-  case component of
-      0 -> {star| color = (setX value star.color)}
-      1 -> {star| color = (setY value star.color)}
-      2 -> {star| color = (setZ value star.color)}
-      _ -> star
+    case component of
+        0 ->
+            { star | color = (setX value star.color) }
+
+        1 ->
+            { star | color = (setY value star.color) }
+
+        2 ->
+            { star | color = (setZ value star.color) }
+
+        _ ->
+            star
+
 
 updateStarInList : List Star -> Int -> Star -> List Star
 updateStarInList list indexToUpdate star =
-  let
-    update index prevStar =
-      if index == indexToUpdate then
-        star
-      else
-        prevStar
-  in
-    List.indexedMap update list
-
+    let
+        update index prevStar =
+            if index == indexToUpdate then
+                star
+            else
+                prevStar
+    in
+        List.indexedMap update list
 
 
 updateStar : Float -> Star -> Star
 updateStar dt star =
-  { star
-  | angle = star.angle + star.rotationSpeed * dt * effectiveFPMS
-  , dist = if star.dist < 0.0 then
-             star.dist + 5.0
-           else
-             star.dist - 0.1 * dt * effectiveFPMS
-  }
+    { star
+        | angle = star.angle + star.rotationSpeed * dt * effectiveFPMS
+        , dist =
+            if star.dist < 0.0 then
+                star.dist + 5.0
+            else
+                star.dist - 0.1 * dt * effectiveFPMS
+    }
 
-rotateX : {keys| up: Bool, down: Bool} -> Float -> Float
+
+rotateX : { keys | up : Bool, down : Bool } -> Float -> Float
 rotateX k velocity =
-  let
-    direction =
-      case (k.up, k.down) of
-        (True, False) -> 0.1
-        (False, True) -> -0.1
-        _ -> 0
-  in
-     velocity + direction
+    let
+        direction =
+            case ( k.up, k.down ) of
+                ( True, False ) ->
+                    0.1
 
-move : {keys| w: Bool, s: Bool} -> Vec3 -> Vec3
+                ( False, True ) ->
+                    -0.1
+
+                _ ->
+                    0
+    in
+        velocity + direction
+
+
+move : { keys | w : Bool, s : Bool } -> Vec3 -> Vec3
 move k position =
-  let
-    direction =
-      case (k.w, k.s) of
-        (True, False) -> 0.1
-        (False, True) -> -0.1
-        _ -> 0
-  in
-     position `add` (vec3 0 0 direction)
+    let
+        direction =
+            case ( k.w, k.s ) of
+                ( True, False ) ->
+                    0.1
+
+                ( False, True ) ->
+                    -0.1
+
+                _ ->
+                    0
+    in
+        position `add` (vec3 0 0 direction)
 
 
 main : Program Never
 main =
-  Html.program
-    { init = init
-    , view = view
-    , subscriptions = subscriptions
-    , update = update
-    }
+    Html.program
+        { init = init
+        , view = view
+        , subscriptions = subscriptions
+        , update = update
+        }
+
 
 subscriptions : Model -> Sub Action
 subscriptions _ =
-  [ AnimationFrame.diffs Animate
-  , Keyboard.downs (keyChange True)
-  , Keyboard.ups (keyChange False)
-  ]
-  |> Sub.batch
+    [ AnimationFrame.diffs Animate
+    , Keyboard.downs (keyChange True)
+    , Keyboard.ups (keyChange False)
+    ]
+        |> Sub.batch
+
 
 keyChange : Bool -> Keyboard.KeyCode -> Action
 keyChange on keyCode =
-  (case keyCode of
-    38 -> \k -> {k | up = on}
-    40 -> \k -> {k | down = on}
-    87 -> \k -> {k | w = on}
-    83 -> \k -> {k | s = on}
-    _ -> Basics.identity
-  ) |> KeyChange
+    (case keyCode of
+        38 ->
+            \k -> { k | up = on }
+
+        40 ->
+            \k -> { k | down = on }
+
+        87 ->
+            \k -> { k | w = on }
+
+        83 ->
+            \k -> { k | s = on }
+
+        _ ->
+            Basics.identity
+    )
+        |> KeyChange
+
+
 
 -- MESHES
 
-starMesh : Drawable { position:Vec3, coord:Vec3 }
+
+starMesh : Drawable { position : Vec3, coord : Vec3 }
 starMesh =
-  Triangle
-    [ ( { position = vec3 -1 1 0, coord = vec3 0 1 0 }
-      , { position = vec3 1 1 0, coord = vec3 1 1 0 }
-      , { position = vec3 -1 -1 0, coord = vec3 0 0 0 }
-      ),
-      ( { position = vec3 -1 -1 0, coord = vec3 0 0 0 }
-      , { position = vec3 1 1 0, coord = vec3 1 1 0 }
-      , { position = vec3 1 -1 0, coord = vec3 1 0 0 }
-      )
-    ]
+    Triangle
+        [ ( { position = vec3 -1 1 0, coord = vec3 0 1 0 }
+          , { position = vec3 1 1 0, coord = vec3 1 1 0 }
+          , { position = vec3 -1 -1 0, coord = vec3 0 0 0 }
+          )
+        , ( { position = vec3 -1 -1 0, coord = vec3 0 0 0 }
+          , { position = vec3 1 1 0, coord = vec3 1 1 0 }
+          , { position = vec3 1 -1 0, coord = vec3 1 0 0 }
+          )
+        ]
+
+
 
 -- VIEW
 
+
 view : Model -> Html Action
-view {texture, position, tilt, stars, spin} =
-  let
-    entities = List.concat (List.map (renderStar tilt texture position spin) stars)
-  in
-    div
-      []
-      [ WebGL.toHtml
-          [ width 500, height 500, style [("backgroundColor", "black")]  ]
-          entities
-      , div
-          [ style
-              [ ("font-family", "monospace")
-              , ("left", "20px")
-              , ("right", "20px")
-              , ("top", "500px")
-              ]
-          ]
-          [ text message]
-      ]
+view { texture, position, tilt, stars, spin } =
+    let
+        entities =
+            List.concat (List.map (renderStar tilt texture position spin) stars)
+    in
+        div
+            []
+            [ WebGL.toHtml
+                [ width 500, height 500, style [ ( "backgroundColor", "black" ) ] ]
+                entities
+            , div
+                [ style
+                    [ ( "font-family", "monospace" )
+                    , ( "left", "20px" )
+                    , ( "right", "20px" )
+                    , ( "top", "500px" )
+                    ]
+                ]
+                [ text message ]
+            ]
+
 
 message : String
 message =
     "Up/Down rotate, w/s -> move camera in/out"
 
+
 renderStar : Float -> Maybe Texture -> Vec3 -> Float -> Star -> List Renderable
 renderStar tilt texture position spin star =
-  renderEntity starMesh tilt texture position spin star
+    renderEntity starMesh tilt texture position spin star
 
-renderEntity : Drawable { position:Vec3, coord:Vec3 } -> Float -> Maybe Texture -> Vec3 -> Float -> Star -> List Renderable
+
+renderEntity : Drawable { position : Vec3, coord : Vec3 } -> Float -> Maybe Texture -> Vec3 -> Float -> Star -> List Renderable
 renderEntity mesh tilt texture position spin star =
-  case texture of
-    Nothing ->
-     []
-    Just tex ->
-     [renderWithConfig [Enable Blend, Disable DepthTest, BlendFunc (SrcAlpha, One)] vertexShader fragmentShader mesh (uniformsStar tilt tex position spin star)]
+    case texture of
+        Nothing ->
+            []
 
-uniformsStar : Float -> Texture -> Vec3 -> Float -> Star -> { texture:Texture, perspective:Mat4, camera:Mat4, worldSpace: Mat4, color: Vec3 }
+        Just tex ->
+            [ renderWithConfig [ Enable Blend, Disable DepthTest, BlendFunc ( SrcAlpha, One ) ] vertexShader fragmentShader mesh (uniformsStar tilt tex position spin star) ]
+
+
+uniformsStar : Float -> Texture -> Vec3 -> Float -> Star -> { texture : Texture, perspective : Mat4, camera : Mat4, worldSpace : Mat4, color : Vec3 }
 uniformsStar tilt texture position spin { dist, rotationSpeed, color, angle } =
-  { texture = texture
-  , worldSpace = makeRotate tilt (vec3 1 0 0) `mul`  makeRotate angle (vec3 0 1 0) `mul` makeTranslate (vec3 dist 0 0) `mul` makeRotate angle (vec3 0 -1 0)  `mul` makeRotate tilt (vec3 -1 0 0) `mul` makeRotate spin (vec3 0 0 1)
-  , camera = makeLookAt position (vec3 0 0 -1) (vec3 0 1 0)
-  , perspective = makePerspective 45 1 0.01 100
-  , color = color
-  }
+    { texture = texture
+    , worldSpace = makeRotate tilt (vec3 1 0 0) `mul` makeRotate angle (vec3 0 1 0) `mul` makeTranslate (vec3 dist 0 0) `mul` makeRotate angle (vec3 0 -1 0) `mul` makeRotate tilt (vec3 -1 0 0) `mul` makeRotate spin (vec3 0 0 1)
+    , camera = makeLookAt position (vec3 0 0 -1) (vec3 0 1 0)
+    , perspective = makePerspective 45 1 0.01 100
+    , color = color
+    }
+
+
 
 -- SHADERS
 
-vertexShader : Shader { attr| position:Vec3, coord:Vec3 } { unif | worldSpace:Mat4, perspective:Mat4, camera:Mat4} { vcoord:Vec2 }
-vertexShader = [glsl|
+
+vertexShader : Shader { attr | position : Vec3, coord : Vec3 } { unif | worldSpace : Mat4, perspective : Mat4, camera : Mat4 } { vcoord : Vec2 }
+vertexShader =
+    [glsl|
 
   precision mediump float;
   attribute vec3 position;
@@ -288,8 +368,10 @@ vertexShader = [glsl|
   }
 |]
 
-fragmentShader : Shader {} { unif | texture:Texture, color:Vec3 } { vcoord:Vec2 }
-fragmentShader = [glsl|
+
+fragmentShader : Shader {} { unif | texture : Texture, color : Vec3 } { vcoord : Vec2 }
+fragmentShader =
+    [glsl|
   precision mediump float;
   uniform sampler2D texture;
   uniform vec3 color;

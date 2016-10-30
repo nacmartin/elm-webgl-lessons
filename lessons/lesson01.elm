@@ -1,44 +1,56 @@
+module Main exposing (..)
+
 import Math.Vector3 exposing (..)
 import WebGL exposing (..)
 import Html exposing (Html)
 import Html.App as Html
 import Html.Attributes exposing (width, height, style)
 
+
 -- Create a mesh with a triangle and a square
 
-type alias Vertex = { position : Vec3 }
+
+type alias Vertex =
+    { position : Vec3 }
+
 
 triangle : Drawable Vertex
 triangle =
-  WebGL.Triangle
-    [ ( { position = vec3 0 1 0 }
-      , { position = vec3 -1 -1 0 }
-      , { position = vec3 1 -1 0 }
-      )
-    ]
+    WebGL.Triangle
+        [ ( { position = vec3 0 1 0 }
+          , { position = vec3 -1 -1 0 }
+          , { position = vec3 1 -1 0 }
+          )
+        ]
+
 
 square : Drawable Vertex
 square =
-  WebGL.TriangleStrip
-    ( [ { position = vec3 1 1 0 }
-      , { position = vec3 -1 1 0 }
-      , { position = vec3 1 -1 0 }
-      , { position = vec3 -1 -1 0 }
-      ]
-    )
+    WebGL.TriangleStrip
+        ([ { position = vec3 1 1 0 }
+         , { position = vec3 -1 1 0 }
+         , { position = vec3 1 -1 0 }
+         , { position = vec3 -1 -1 0 }
+         ]
+        )
+
 
 main : Html msg
 main =
-  WebGL.toHtml
-    [ width 400, height 400, style [("backgroundColor", "black")] ]
-    ( [render vertexShader fragmentShader square { displacement = vec3 -1.5 0 0}] ++
-      [render vertexShader fragmentShader triangle { displacement = vec3 1.5 0 0}]
-    )
+    WebGL.toHtml
+        [ width 400, height 400, style [ ( "backgroundColor", "black" ) ] ]
+        ([ render vertexShader fragmentShader square { displacement = vec3 -1.5 0 0 } ]
+            ++ [ render vertexShader fragmentShader triangle { displacement = vec3 1.5 0 0 } ]
+        )
+
+
 
 -- Shaders
 
-vertexShader : Shader Vertex { unif | displacement:Vec3 } {}
-vertexShader = [glsl|
+
+vertexShader : Shader Vertex { unif | displacement : Vec3 } {}
+vertexShader =
+    [glsl|
   precision mediump float;
   attribute vec3 position;
   uniform vec3 displacement;
@@ -48,8 +60,10 @@ vertexShader = [glsl|
   }
 |]
 
+
 fragmentShader : Shader {} u {}
-fragmentShader = [glsl|
+fragmentShader =
+    [glsl|
   precision mediump float;
 
   void main () {

@@ -1,3 +1,5 @@
+module Main exposing (..)
+
 import Debug
 import Keyboard
 import Math.Vector2 exposing (Vec2)
@@ -19,360 +21,456 @@ import Html.Events exposing (onInput, onClick)
 import Html.Attributes exposing (width, height, style, type', checked, step, value)
 import List.Extra exposing (getAt, greedyGroupsOf)
 
-effectiveFPMS = 30.0 / 10000.0
 
-type alias Vertex = { position : Vec3, coord: Vec3, normal: Vec3 }
+effectiveFPMS =
+    30.0 / 10000.0
+
+
+type alias Vertex =
+    { position : Vec3, coord : Vec3, normal : Vec3 }
+
 
 type alias Triplet =
-  { x : String
-  , y : String
-  , z : String
-  }
+    { x : String
+    , y : String
+    , z : String
+    }
+
 
 type alias Model =
-  { texture : Maybe Texture
-  , position: Vec3
-  , world: Drawable Vertex
-  , useLighting: Bool
-  , useSpecular: Bool
-  , useTextures: Bool
-  , shininess: Float
-  , shininessText: String
-  , ambientColorText: {x:String, y:String, z:String}
-  , ambientColor: Vec3
-  , diffuseColorText: {x:String, y:String, z:String}
-  , diffuseColor: Vec3
-  , specularText: {x:String, y:String, z:String}
-  , specular: Vec3
-  , specularColorText: {x:String, y:String, z:String}
-  , specularColor: Vec3
-  , theta : Float
-  }
+    { texture : Maybe Texture
+    , position : Vec3
+    , world : Drawable Vertex
+    , useLighting : Bool
+    , useSpecular : Bool
+    , useTextures : Bool
+    , shininess : Float
+    , shininessText : String
+    , ambientColorText : { x : String, y : String, z : String }
+    , ambientColor : Vec3
+    , diffuseColorText : { x : String, y : String, z : String }
+    , diffuseColor : Vec3
+    , specularText : { x : String, y : String, z : String }
+    , specular : Vec3
+    , specularColorText : { x : String, y : String, z : String }
+    , specularColor : Vec3
+    , theta : Float
+    }
+
 
 type Action
-  = TexturesError Error
-  | TexturesLoaded (Maybe Texture)
-  | Animate Time
-  | FetchFail Http.Error
-  | FetchSucceed (Drawable Vertex )
-  | UseLighting
-  | UseSpecular
-  | UseTextures
-  | ChangeShininess String
-  | ChangeSpecularColorR String
-  | ChangeSpecularColorG String
-  | ChangeSpecularColorB String
-  | ChangeAmbientColorR String
-  | ChangeAmbientColorG String
-  | ChangeAmbientColorB String
-  | ChangeDiffuseColorR String
-  | ChangeDiffuseColorG String
-  | ChangeDiffuseColorB String
-  | ChangeSpecularX String
-  | ChangeSpecularY String
-  | ChangeSpecularZ String
+    = TexturesError Error
+    | TexturesLoaded (Maybe Texture)
+    | Animate Time
+    | FetchFail Http.Error
+    | FetchSucceed (Drawable Vertex)
+    | UseLighting
+    | UseSpecular
+    | UseTextures
+    | ChangeShininess String
+    | ChangeSpecularColorR String
+    | ChangeSpecularColorG String
+    | ChangeSpecularColorB String
+    | ChangeAmbientColorR String
+    | ChangeAmbientColorG String
+    | ChangeAmbientColorB String
+    | ChangeDiffuseColorR String
+    | ChangeDiffuseColorG String
+    | ChangeDiffuseColorB String
+    | ChangeSpecularX String
+    | ChangeSpecularY String
+    | ChangeSpecularZ String
 
-init : (Model, Cmd Action)
+
+init : ( Model, Cmd Action )
 init =
-  ( {texture = Nothing
-  , position = vec3 0 0 0
-  , world = Triangle []
-  , useLighting = True
-  , useTextures = True
-  , useSpecular = True
-  , specularColor = (vec3 1 1 1)
-  , specularColorText = {x="1", y="1", z="1"}
-  , ambientColor = (vec3 0.2 0.2 0.2)
-  , ambientColorText = {x="0.2", y="0.2", z="0.2"}
-  , diffuseColor = (vec3 0.8 0.8 0.8)
-  , diffuseColorText = {x="0.8", y="0.8", z="0.8"}
-  , specular = (vec3 -10 4 20)
-  , specularText = {x="-10", y="4", z="20"}
-  , theta = 0
-  , shininessText = "32.0"
-  , shininess = 32.0
-  }
-  , Cmd.batch[ fetchTexture |> Task.perform TexturesError TexturesLoaded
-             , fetchWorld
-             ]
-  )
+    ( { texture = Nothing
+      , position = vec3 0 0 0
+      , world = Triangle []
+      , useLighting = True
+      , useTextures = True
+      , useSpecular = True
+      , specularColor = (vec3 1 1 1)
+      , specularColorText = { x = "1", y = "1", z = "1" }
+      , ambientColor = (vec3 0.2 0.2 0.2)
+      , ambientColorText = { x = "0.2", y = "0.2", z = "0.2" }
+      , diffuseColor = (vec3 0.8 0.8 0.8)
+      , diffuseColorText = { x = "0.8", y = "0.8", z = "0.8" }
+      , specular = (vec3 -10 4 20)
+      , specularText = { x = "-10", y = "4", z = "20" }
+      , theta = 0
+      , shininessText = "32.0"
+      , shininess = 32.0
+      }
+    , Cmd.batch
+        [ fetchTexture |> Task.perform TexturesError TexturesLoaded
+        , fetchWorld
+        ]
+    )
+
 
 fetchWorld : Cmd Action
 fetchWorld =
-  let
-    uri =
-      "meshes/Teapot.json"
-  in
-    Task.perform FetchFail FetchSucceed (Http.get worldDecoder uri `Task.andThen` getWorld)
+    let
+        uri =
+            "meshes/Teapot.json"
+    in
+        Task.perform FetchFail FetchSucceed (Http.get worldDecoder uri `Task.andThen` getWorld)
 
 
-type alias World = { vertexPositions : List Float, vertexNormals : List Float, vertexTextureCoords : List Float, indices : List Int}
+type alias World =
+    { vertexPositions : List Float, vertexNormals : List Float, vertexTextureCoords : List Float, indices : List Int }
+
 
 makeVec3 : List Float -> Vec3
 makeVec3 coords =
-  case coords of
-      a :: b :: [] -> vec3 a b 0
-      a :: b :: c :: [] -> vec3 a b c
-      _ -> vec3 0 0 0
+    case coords of
+        a :: b :: [] ->
+            vec3 a b 0
+
+        a :: b :: c :: [] ->
+            vec3 a b c
+
+        _ ->
+            vec3 0 0 0
+
+
 
 --getWorld : World -> Task Http.Error (Drawable)
-getWorld { vertexPositions, vertexNormals, vertexTextureCoords, indices} =
-  let
-    vertexes = List.map3 (\a b c -> { position = makeVec3 a, coord = makeVec3 b, normal = makeVec3 c}) (greedyGroupsOf 3 vertexPositions) (greedyGroupsOf 2 vertexTextureCoords) (greedyGroupsOf 3 vertexNormals)
-  in
---    Task.succeed (sphere)
-    Task.succeed (WebGL.IndexedTriangles ( vertexes, indices))
 
-worldDecoder = object4 World ("vertexPositions" := list float) ("vertexNormals" := list float) ("vertexTextureCoords" := list float) ("indices" := list int)
+
+getWorld { vertexPositions, vertexNormals, vertexTextureCoords, indices } =
+    let
+        vertexes =
+            List.map3 (\a b c -> { position = makeVec3 a, coord = makeVec3 b, normal = makeVec3 c }) (greedyGroupsOf 3 vertexPositions) (greedyGroupsOf 2 vertexTextureCoords) (greedyGroupsOf 3 vertexNormals)
+    in
+        --    Task.succeed (sphere)
+        Task.succeed (WebGL.IndexedTriangles ( vertexes, indices ))
+
+
+worldDecoder =
+    object4 World ("vertexPositions" := list float) ("vertexNormals" := list float) ("vertexTextureCoords" := list float) ("indices" := list int)
+
 
 fetchTexture : Task Error (Maybe Texture)
 fetchTexture =
-  loadTextureWithFilter WebGL.Linear "textures/metal.jpg" `Task.andThen` \linearTexture ->
-  Task.succeed (Just linearTexture)
+    loadTextureWithFilter WebGL.Linear "textures/metal.jpg"
+        `Task.andThen`
+            \linearTexture ->
+                Task.succeed (Just linearTexture)
 
-update : Action -> Model -> (Model, Cmd Action)
+
+update : Action -> Model -> ( Model, Cmd Action )
 update action model =
-  case action of
-    FetchFail err ->
-      (model, Cmd.none)
-    FetchSucceed world ->
-      ({model | world = world}, Cmd.none)
-    TexturesError err ->
-      (model, Cmd.none)
-    TexturesLoaded texture ->
-      ({model | texture = texture}, Cmd.none)
-    Animate dt ->
-      ( { model | theta = model.theta + dt / 1000 }
-        , Cmd.none
-      )
-    UseLighting ->
-        ( { model | useLighting = not model.useLighting }, Cmd.none )
-    UseTextures ->
-        ( { model | useTextures = not model.useTextures }, Cmd.none )
-    UseSpecular ->
-        ( { model | useSpecular = not model.useSpecular }, Cmd.none )
-    ChangeSpecularX value ->
-        let
-            (numeric, textual) = updateAndParseX model.specular model.specularText value
-        in
-           ( { model | specular = numeric, specularText = textual }, Cmd.none )
-    ChangeSpecularY value ->
-        let
-            (numeric, textual) = updateAndParseY model.specular model.specularText value
-        in
-           ( { model | specular = numeric, specularText = textual }, Cmd.none )
-    ChangeSpecularZ value ->
-        let
-            (numeric, textual) = updateAndParseZ model.specular model.specularText value
-        in
-           ( { model | specular = numeric, specularText = textual }, Cmd.none )
-    ChangeSpecularColorR value ->
-        let
-            (numeric, textual) = updateAndParseX model.specularColor model.specularColorText value
-        in
-           ( { model | specularColor = numeric, specularColorText = textual }, Cmd.none )
-    ChangeSpecularColorG value ->
-        let
-            (numeric, textual) = updateAndParseY model.specularColor model.specularColorText value
-        in
-           ( { model | specularColor = numeric, specularColorText = textual }, Cmd.none )
-    ChangeSpecularColorB value ->
-        let
-            (numeric, textual) = updateAndParseZ model.specularColor model.specularColorText value
-        in
-           ( { model | specularColor = numeric, specularColorText = textual }, Cmd.none )
-    ChangeAmbientColorR value ->
-        let
-            (numeric, textual) = updateAndParseX model.ambientColor model.ambientColorText value
-        in
-           ( { model | ambientColor = numeric, ambientColorText = textual }, Cmd.none )
-    ChangeAmbientColorG value ->
-        let
-            (numeric, textual) = updateAndParseY model.ambientColor model.ambientColorText value
-        in
-           ( { model | ambientColor = numeric, ambientColorText = textual }, Cmd.none )
-    ChangeAmbientColorB value ->
-        let
-            (numeric, textual) = updateAndParseZ model.ambientColor model.ambientColorText value
-        in
-           ( { model | ambientColor = numeric, ambientColorText = textual }, Cmd.none )
-    ChangeDiffuseColorR value ->
-        let
-            (numeric, textual) = updateAndParseX model.diffuseColor model.diffuseColorText value
-        in
-           ( { model | diffuseColor = numeric, diffuseColorText = textual }, Cmd.none )
-    ChangeDiffuseColorG value ->
-        let
-            (numeric, textual) = updateAndParseY model.diffuseColor model.diffuseColorText value
-        in
-           ( { model | diffuseColor = numeric, diffuseColorText = textual }, Cmd.none )
-    ChangeDiffuseColorB value ->
-        let
-            (numeric, textual) = updateAndParseZ model.diffuseColor model.diffuseColorText value
-        in
-           ( { model | diffuseColor = numeric, diffuseColorText = textual }, Cmd.none )
-    ChangeShininess value ->
-        let
-            parsed =
-                case String.toFloat value of
-                    Ok value -> value
-                    _ -> model.shininess
-        in
-           ( { model | shininess = parsed, shininessText = value }, Cmd.none )
+    case action of
+        FetchFail err ->
+            ( model, Cmd.none )
 
-updateAndParseX:  Vec3 -> Triplet -> String -> (Vec3, Triplet)
+        FetchSucceed world ->
+            ( { model | world = world }, Cmd.none )
+
+        TexturesError err ->
+            ( model, Cmd.none )
+
+        TexturesLoaded texture ->
+            ( { model | texture = texture }, Cmd.none )
+
+        Animate dt ->
+            ( { model | theta = model.theta + dt / 1000 }
+            , Cmd.none
+            )
+
+        UseLighting ->
+            ( { model | useLighting = not model.useLighting }, Cmd.none )
+
+        UseTextures ->
+            ( { model | useTextures = not model.useTextures }, Cmd.none )
+
+        UseSpecular ->
+            ( { model | useSpecular = not model.useSpecular }, Cmd.none )
+
+        ChangeSpecularX value ->
+            let
+                ( numeric, textual ) =
+                    updateAndParseX model.specular model.specularText value
+            in
+                ( { model | specular = numeric, specularText = textual }, Cmd.none )
+
+        ChangeSpecularY value ->
+            let
+                ( numeric, textual ) =
+                    updateAndParseY model.specular model.specularText value
+            in
+                ( { model | specular = numeric, specularText = textual }, Cmd.none )
+
+        ChangeSpecularZ value ->
+            let
+                ( numeric, textual ) =
+                    updateAndParseZ model.specular model.specularText value
+            in
+                ( { model | specular = numeric, specularText = textual }, Cmd.none )
+
+        ChangeSpecularColorR value ->
+            let
+                ( numeric, textual ) =
+                    updateAndParseX model.specularColor model.specularColorText value
+            in
+                ( { model | specularColor = numeric, specularColorText = textual }, Cmd.none )
+
+        ChangeSpecularColorG value ->
+            let
+                ( numeric, textual ) =
+                    updateAndParseY model.specularColor model.specularColorText value
+            in
+                ( { model | specularColor = numeric, specularColorText = textual }, Cmd.none )
+
+        ChangeSpecularColorB value ->
+            let
+                ( numeric, textual ) =
+                    updateAndParseZ model.specularColor model.specularColorText value
+            in
+                ( { model | specularColor = numeric, specularColorText = textual }, Cmd.none )
+
+        ChangeAmbientColorR value ->
+            let
+                ( numeric, textual ) =
+                    updateAndParseX model.ambientColor model.ambientColorText value
+            in
+                ( { model | ambientColor = numeric, ambientColorText = textual }, Cmd.none )
+
+        ChangeAmbientColorG value ->
+            let
+                ( numeric, textual ) =
+                    updateAndParseY model.ambientColor model.ambientColorText value
+            in
+                ( { model | ambientColor = numeric, ambientColorText = textual }, Cmd.none )
+
+        ChangeAmbientColorB value ->
+            let
+                ( numeric, textual ) =
+                    updateAndParseZ model.ambientColor model.ambientColorText value
+            in
+                ( { model | ambientColor = numeric, ambientColorText = textual }, Cmd.none )
+
+        ChangeDiffuseColorR value ->
+            let
+                ( numeric, textual ) =
+                    updateAndParseX model.diffuseColor model.diffuseColorText value
+            in
+                ( { model | diffuseColor = numeric, diffuseColorText = textual }, Cmd.none )
+
+        ChangeDiffuseColorG value ->
+            let
+                ( numeric, textual ) =
+                    updateAndParseY model.diffuseColor model.diffuseColorText value
+            in
+                ( { model | diffuseColor = numeric, diffuseColorText = textual }, Cmd.none )
+
+        ChangeDiffuseColorB value ->
+            let
+                ( numeric, textual ) =
+                    updateAndParseZ model.diffuseColor model.diffuseColorText value
+            in
+                ( { model | diffuseColor = numeric, diffuseColorText = textual }, Cmd.none )
+
+        ChangeShininess value ->
+            let
+                parsed =
+                    case String.toFloat value of
+                        Ok value ->
+                            value
+
+                        _ ->
+                            model.shininess
+            in
+                ( { model | shininess = parsed, shininessText = value }, Cmd.none )
+
+
+updateAndParseX : Vec3 -> Triplet -> String -> ( Vec3, Triplet )
 updateAndParseX default textual value =
-  let text = { textual | x = value }
-  in
-    updateAndParse default text
+    let
+        text =
+            { textual | x = value }
+    in
+        updateAndParse default text
 
-updateAndParseY:  Vec3 -> Triplet -> String -> (Vec3, Triplet)
+
+updateAndParseY : Vec3 -> Triplet -> String -> ( Vec3, Triplet )
 updateAndParseY default textual value =
-  let text = { textual | y = value }
-  in
-    updateAndParse default text
+    let
+        text =
+            { textual | y = value }
+    in
+        updateAndParse default text
 
-updateAndParseZ:  Vec3 -> Triplet -> String -> (Vec3, Triplet)
+
+updateAndParseZ : Vec3 -> Triplet -> String -> ( Vec3, Triplet )
 updateAndParseZ default textual value =
-  let text = { textual | z = value }
-  in
-    updateAndParse default text
+    let
+        text =
+            { textual | z = value }
+    in
+        updateAndParse default text
 
-updateAndParse: Vec3 -> Triplet -> (Vec3, Triplet)
+
+updateAndParse : Vec3 -> Triplet -> ( Vec3, Triplet )
 updateAndParse default text =
-  case (String.toFloat text.x, String.toFloat text.y, String.toFloat text.z) of
-      (Ok vr, Ok vg, Ok vb) -> (vec3 vr vg vb, text)
-      _ -> ( default, text )
+    case ( String.toFloat text.x, String.toFloat text.y, String.toFloat text.z ) of
+        ( Ok vr, Ok vg, Ok vb ) ->
+            ( vec3 vr vg vb, text )
+
+        _ ->
+            ( default, text )
+
 
 main : Program Never
 main =
-  Html.program
-    { init = init
-    , view = view
-    , subscriptions = subscriptions
-    , update = update
-    }
+    Html.program
+        { init = init
+        , view = view
+        , subscriptions = subscriptions
+        , update = update
+        }
+
 
 subscriptions : Model -> Sub Action
 subscriptions _ =
-  [ AnimationFrame.diffs Animate
-  ]
-  |> Sub.batch
+    [ AnimationFrame.diffs Animate
+    ]
+        |> Sub.batch
+
+
 
 -- VIEW
 
+
 view : Model -> Html Action
 view { texture, theta, shininess, world, position, useLighting, useTextures, useSpecular, specular, specularText, specularColor, specularColorText, ambientColor, shininessText, ambientColorText, diffuseColorText, diffuseColor } =
-  div
-    []
-    [ WebGL.toHtml
-        [ width 600, height 600, style [("backgroundColor", "black")]  ]
-        ( renderEntity world theta shininess texture position useLighting useSpecular useTextures specularColor specular ambientColor diffuseColor)
-    , div
-        [ style
-          [ ("left", "20px")
-          , ("right", "20px")
-          , ("top", "500px")
-          ]
+    div
+        []
+        [ WebGL.toHtml
+            [ width 600, height 600, style [ ( "backgroundColor", "black" ) ] ]
+            (renderEntity world theta shininess texture position useLighting useSpecular useTextures specularColor specular ambientColor diffuseColor)
+        , div
+            [ style
+                [ ( "left", "20px" )
+                , ( "right", "20px" )
+                , ( "top", "500px" )
+                ]
+            ]
+            [ div []
+                [ input [ type' "checkbox", onClick UseLighting, checked useLighting ] []
+                , text " Use lighting"
+                ]
+            , div []
+                [ input [ type' "checkbox", onClick UseSpecular, checked useSpecular ] []
+                , text " Use specular lighting"
+                ]
+            , div []
+                [ input [ type' "checkbox", onClick UseTextures, checked useTextures ] []
+                , text " Use textures"
+                ]
+            , div []
+                [ h2 [] [ text "Material" ]
+                , div []
+                    [ text "Shininess: "
+                    , input [ type' "text", onInput ChangeShininess, Html.Attributes.value shininessText ] []
+                    ]
+                ]
+            , div []
+                [ h2 [] [ text "Point Light" ]
+                , div []
+                    [ text "Position: "
+                    , text " x: "
+                    , input [ type' "text", onInput ChangeSpecularX, Html.Attributes.value specularText.x ] []
+                    , text " y: "
+                    , input [ type' "text", onInput ChangeSpecularY, Html.Attributes.value specularText.y ] []
+                    , text " z: "
+                    , input [ type' "text", onInput ChangeSpecularZ, Html.Attributes.value specularText.z ] []
+                    ]
+                , div []
+                    [ text "Specular color: "
+                    , text " R: "
+                    , input [ type' "text", onInput ChangeSpecularColorR, Html.Attributes.value specularColorText.x ] []
+                    , text " G: "
+                    , input [ type' "text", onInput ChangeSpecularColorG, Html.Attributes.value specularColorText.y ] []
+                    , text " B: "
+                    , input [ type' "text", onInput ChangeSpecularColorB, Html.Attributes.value specularColorText.z ] []
+                    ]
+                , div []
+                    [ text "Diffuse color: "
+                    , text " R: "
+                    , input [ type' "text", onInput ChangeDiffuseColorR, Html.Attributes.value diffuseColorText.x ] []
+                    , text " G: "
+                    , input [ type' "text", onInput ChangeDiffuseColorG, Html.Attributes.value diffuseColorText.y ] []
+                    , text " B: "
+                    , input [ type' "text", onInput ChangeDiffuseColorB, Html.Attributes.value diffuseColorText.z ] []
+                    ]
+                , h2 [] [ text "Ambient Light" ]
+                , div []
+                    [ text "Color: "
+                    , text " R: "
+                    , input [ type' "text", onInput ChangeAmbientColorR, Html.Attributes.value ambientColorText.x ] []
+                    , text " G: "
+                    , input [ type' "text", onInput ChangeAmbientColorG, Html.Attributes.value ambientColorText.y ] []
+                    , text " B: "
+                    , input [ type' "text", onInput ChangeAmbientColorB, Html.Attributes.value ambientColorText.z ] []
+                    ]
+                ]
+            ]
         ]
-        [ div []
-          [ input [type' "checkbox", onClick UseLighting, checked useLighting] []
-          , text " Use lighting"
-          ]
-        , div []
-          [ input [type' "checkbox", onClick UseSpecular, checked useSpecular] []
-          , text " Use specular lighting"
-          ]
-        , div []
-          [ input [type' "checkbox", onClick UseTextures, checked useTextures] []
-          , text " Use textures"
-          ]
-        , div []
-          [ h2 [] [ text "Material"]
-          , div [] [ text "Shininess: "
-            , input [type' "text", onInput ChangeShininess, Html.Attributes.value shininessText] []
-            ]
-          ]
-        , div []
-          [ h2 [] [ text "Point Light"]
-          , div []
-            [ text "Position: "
-            , text " x: "
-            , input [type' "text", onInput ChangeSpecularX, Html.Attributes.value specularText.x] []
-            , text " y: "
-            , input [type' "text", onInput ChangeSpecularY, Html.Attributes.value specularText.y] []
-            , text " z: "
-            , input [type' "text", onInput ChangeSpecularZ, Html.Attributes.value specularText.z] []
-            ]
-          , div []
-            [ text "Specular color: "
-            , text " R: "
-            , input [type' "text", onInput ChangeSpecularColorR, Html.Attributes.value specularColorText.x] []
-            , text " G: "
-            , input [type' "text", onInput ChangeSpecularColorG, Html.Attributes.value specularColorText.y] []
-            , text " B: "
-            , input [type' "text", onInput ChangeSpecularColorB, Html.Attributes.value specularColorText.z] []
-            ]
-          , div []
-            [ text "Diffuse color: "
-            , text " R: "
-            , input [type' "text", onInput ChangeDiffuseColorR, Html.Attributes.value diffuseColorText.x] []
-            , text " G: "
-            , input [type' "text", onInput ChangeDiffuseColorG, Html.Attributes.value diffuseColorText.y] []
-            , text " B: "
-            , input [type' "text", onInput ChangeDiffuseColorB, Html.Attributes.value diffuseColorText.z] []
-            ]
-          , h2 [] [ text "Ambient Light"]
-          , div []
-            [ text "Color: "
-            , text " R: "
-            , input [type' "text", onInput ChangeAmbientColorR, Html.Attributes.value ambientColorText.x] []
-            , text " G: "
-            , input [type' "text", onInput ChangeAmbientColorG, Html.Attributes.value ambientColorText.y] []
-            , text " B: "
-            , input [type' "text", onInput ChangeAmbientColorB, Html.Attributes.value ambientColorText.z] []
-            ]
-          ]
-       ]
-    ]
+
 
 message : String
 message =
     "Up/Down/Left/Right turn head, w/a/s/d -> move around"
 
-renderEntity : Drawable { position:Vec3, coord:Vec3, normal:Vec3 } -> Float -> Float -> Maybe Texture -> Vec3 -> Bool -> Bool -> Bool -> Vec3 -> Vec3 -> Vec3 -> Vec3 -> List Renderable
-renderEntity world theta shininess texture position useLighting useSpecular useTextures specularColor specular ambientColor diffuseColor =
-  case texture of
-    Nothing ->
-     []
-    Just tex ->
-     [render vertexShader fragmentShader world (uniforms tex theta shininess position useLighting useSpecular useTextures specularColor specular ambientColor diffuseColor)]
 
-uniforms : Texture -> Float -> Float -> Vec3 -> Bool -> Bool -> Bool -> Vec3 -> Vec3 -> Vec3 -> Vec3 -> { texture:Texture, perspective:Mat4, camera:Mat4, worldSpace: Mat4, useLighting: Bool, normalMatrix: Mat4, useSpecular: Bool, useTextures: Bool, specularColor: Vec3, ambientColor: Vec3, diffuseColor: Vec3, specular: Vec3, shininess:Float}
+renderEntity : Drawable { position : Vec3, coord : Vec3, normal : Vec3 } -> Float -> Float -> Maybe Texture -> Vec3 -> Bool -> Bool -> Bool -> Vec3 -> Vec3 -> Vec3 -> Vec3 -> List Renderable
+renderEntity world theta shininess texture position useLighting useSpecular useTextures specularColor specular ambientColor diffuseColor =
+    case texture of
+        Nothing ->
+            []
+
+        Just tex ->
+            [ render vertexShader fragmentShader world (uniforms tex theta shininess position useLighting useSpecular useTextures specularColor specular ambientColor diffuseColor) ]
+
+
+uniforms : Texture -> Float -> Float -> Vec3 -> Bool -> Bool -> Bool -> Vec3 -> Vec3 -> Vec3 -> Vec3 -> { texture : Texture, perspective : Mat4, camera : Mat4, worldSpace : Mat4, useLighting : Bool, normalMatrix : Mat4, useSpecular : Bool, useTextures : Bool, specularColor : Vec3, ambientColor : Vec3, diffuseColor : Vec3, specular : Vec3, shininess : Float }
 uniforms texture theta shininess position useLighting useSpecular useTextures specularColor specular ambientColor diffuseColor =
-  let
-    worldSpace = (translate position (rotate (degrees 23.4) (vec3 1 0 1) (makeRotate theta (vec3 0 1 0) )))
-    camera = makeLookAt (vec3 0 0 50) (vec3 0 0 -1) (vec3 0 1 0)
-    perspective = makePerspective 45 1 0.1 100
-  in
-    { texture = texture
-    , worldSpace = worldSpace
-    , camera = camera
-    , perspective = perspective
-    , normalMatrix = transpose(inverseOrthonormal( worldSpace ))
-    , useLighting = useLighting
-    , useSpecular = useSpecular
-    , useTextures = useTextures
-    , specularColor = specularColor
-    , ambientColor = ambientColor
-    , diffuseColor = diffuseColor
-    , specular = specular
-    , shininess = shininess
-    }
+    let
+        worldSpace =
+            (translate position (rotate (degrees 23.4) (vec3 1 0 1) (makeRotate theta (vec3 0 1 0))))
+
+        camera =
+            makeLookAt (vec3 0 0 50) (vec3 0 0 -1) (vec3 0 1 0)
+
+        perspective =
+            makePerspective 45 1 0.1 100
+    in
+        { texture = texture
+        , worldSpace = worldSpace
+        , camera = camera
+        , perspective = perspective
+        , normalMatrix = transpose (inverseOrthonormal (worldSpace))
+        , useLighting = useLighting
+        , useSpecular = useSpecular
+        , useTextures = useTextures
+        , specularColor = specularColor
+        , ambientColor = ambientColor
+        , diffuseColor = diffuseColor
+        , specular = specular
+        , shininess = shininess
+        }
+
+
 
 -- SHADERS
-vertexShader : Shader { attr| position:Vec3, coord:Vec3, normal:Vec3 } { unif | worldSpace:Mat4, perspective:Mat4, camera:Mat4, normalMatrix:Mat4 } { vcoord:Vec2, vPosition:Vec3, vTransformedNormal:Vec3 }
-vertexShader = [glsl|
+
+
+vertexShader : Shader { attr | position : Vec3, coord : Vec3, normal : Vec3 } { unif | worldSpace : Mat4, perspective : Mat4, camera : Mat4, normalMatrix : Mat4 } { vcoord : Vec2, vPosition : Vec3, vTransformedNormal : Vec3 }
+vertexShader =
+    [glsl|
 
   precision mediump float;
 
@@ -398,8 +496,10 @@ vertexShader = [glsl|
   }
 |]
 
-fragmentShader : Shader {} { unif | texture:Texture, useSpecular: Bool, useLighting:Bool, useTextures: Bool, ambientColor:Vec3, specularColor:Vec3, diffuseColor:Vec3, specular:Vec3, shininess:Float } { vcoord:Vec2, vPosition:Vec3, vTransformedNormal:Vec3 }
-fragmentShader = [glsl|
+
+fragmentShader : Shader {} { unif | texture : Texture, useSpecular : Bool, useLighting : Bool, useTextures : Bool, ambientColor : Vec3, specularColor : Vec3, diffuseColor : Vec3, specular : Vec3, shininess : Float } { vcoord : Vec2, vPosition : Vec3, vTransformedNormal : Vec3 }
+fragmentShader =
+    [glsl|
   precision mediump float;
 
   uniform sampler2D texture;
