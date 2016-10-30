@@ -12188,8 +12188,9 @@ var _user$project$Main$update = F2(
 					_1: _elm_lang$core$Platform_Cmd$none
 				};
 			case 'ChangeAlpha':
+				var _p13 = _p10._0;
 				var parsed = function () {
-					var _p12 = _elm_lang$core$String$toFloat(_p10._0);
+					var _p12 = _elm_lang$core$String$toFloat(_p13);
 					if (_p12.ctor === 'Ok') {
 						return _p12._0;
 					} else {
@@ -12200,22 +12201,11 @@ var _user$project$Main$update = F2(
 					ctor: '_Tuple2',
 					_0: _elm_lang$core$Native_Utils.update(
 						model,
-						{alpha: parsed}),
+						{alpha: parsed, alphaText: _p13}),
 					_1: _elm_lang$core$Platform_Cmd$none
 				};
 			case 'ChangeDirectionalX':
-				var _p13 = A3(_user$project$Main$updateAndParseX, model.directional, model.directionalText, _p10._0);
-				var numeric = _p13._0;
-				var textual = _p13._1;
-				return {
-					ctor: '_Tuple2',
-					_0: _elm_lang$core$Native_Utils.update(
-						model,
-						{directional: numeric, directionalText: textual}),
-					_1: _elm_lang$core$Platform_Cmd$none
-				};
-			case 'ChangeDirectionalY':
-				var _p14 = A3(_user$project$Main$updateAndParseY, model.directional, model.directionalText, _p10._0);
+				var _p14 = A3(_user$project$Main$updateAndParseX, model.directional, model.directionalText, _p10._0);
 				var numeric = _p14._0;
 				var textual = _p14._1;
 				return {
@@ -12225,8 +12215,8 @@ var _user$project$Main$update = F2(
 						{directional: numeric, directionalText: textual}),
 					_1: _elm_lang$core$Platform_Cmd$none
 				};
-			case 'ChangeDirectionalZ':
-				var _p15 = A3(_user$project$Main$updateAndParseZ, model.directional, model.directionalText, _p10._0);
+			case 'ChangeDirectionalY':
+				var _p15 = A3(_user$project$Main$updateAndParseY, model.directional, model.directionalText, _p10._0);
 				var numeric = _p15._0;
 				var textual = _p15._1;
 				return {
@@ -12236,19 +12226,19 @@ var _user$project$Main$update = F2(
 						{directional: numeric, directionalText: textual}),
 					_1: _elm_lang$core$Platform_Cmd$none
 				};
-			case 'ChangeDirectionalColourR':
-				var _p16 = A3(_user$project$Main$updateAndParseX, model.directionalColour, model.directionalColourText, _p10._0);
+			case 'ChangeDirectionalZ':
+				var _p16 = A3(_user$project$Main$updateAndParseZ, model.directional, model.directionalText, _p10._0);
 				var numeric = _p16._0;
 				var textual = _p16._1;
 				return {
 					ctor: '_Tuple2',
 					_0: _elm_lang$core$Native_Utils.update(
 						model,
-						{directionalColour: numeric, directionalColourText: textual}),
+						{directional: numeric, directionalText: textual}),
 					_1: _elm_lang$core$Platform_Cmd$none
 				};
-			case 'ChangeDirectionalColourG':
-				var _p17 = A3(_user$project$Main$updateAndParseY, model.directionalColour, model.directionalColourText, _p10._0);
+			case 'ChangeDirectionalColourR':
+				var _p17 = A3(_user$project$Main$updateAndParseX, model.directionalColour, model.directionalColourText, _p10._0);
 				var numeric = _p17._0;
 				var textual = _p17._1;
 				return {
@@ -12258,8 +12248,8 @@ var _user$project$Main$update = F2(
 						{directionalColour: numeric, directionalColourText: textual}),
 					_1: _elm_lang$core$Platform_Cmd$none
 				};
-			case 'ChangeDirectionalColourB':
-				var _p18 = A3(_user$project$Main$updateAndParseZ, model.directionalColour, model.directionalColourText, _p10._0);
+			case 'ChangeDirectionalColourG':
+				var _p18 = A3(_user$project$Main$updateAndParseY, model.directionalColour, model.directionalColourText, _p10._0);
 				var numeric = _p18._0;
 				var textual = _p18._1;
 				return {
@@ -12269,19 +12259,19 @@ var _user$project$Main$update = F2(
 						{directionalColour: numeric, directionalColourText: textual}),
 					_1: _elm_lang$core$Platform_Cmd$none
 				};
-			case 'ChangeAmbientColourR':
-				var _p19 = A3(_user$project$Main$updateAndParseX, model.ambientColour, model.ambientColourText, _p10._0);
+			case 'ChangeDirectionalColourB':
+				var _p19 = A3(_user$project$Main$updateAndParseZ, model.directionalColour, model.directionalColourText, _p10._0);
 				var numeric = _p19._0;
 				var textual = _p19._1;
 				return {
 					ctor: '_Tuple2',
 					_0: _elm_lang$core$Native_Utils.update(
 						model,
-						{ambientColour: numeric, ambientColourText: textual}),
+						{directionalColour: numeric, directionalColourText: textual}),
 					_1: _elm_lang$core$Platform_Cmd$none
 				};
-			case 'ChangeAmbientColourG':
-				var _p20 = A3(_user$project$Main$updateAndParseY, model.ambientColour, model.ambientColourText, _p10._0);
+			case 'ChangeAmbientColourR':
+				var _p20 = A3(_user$project$Main$updateAndParseX, model.ambientColour, model.ambientColourText, _p10._0);
 				var numeric = _p20._0;
 				var textual = _p20._1;
 				return {
@@ -12291,10 +12281,21 @@ var _user$project$Main$update = F2(
 						{ambientColour: numeric, ambientColourText: textual}),
 					_1: _elm_lang$core$Platform_Cmd$none
 				};
-			default:
-				var _p21 = A3(_user$project$Main$updateAndParseZ, model.ambientColour, model.ambientColourText, _p10._0);
+			case 'ChangeAmbientColourG':
+				var _p21 = A3(_user$project$Main$updateAndParseY, model.ambientColour, model.ambientColourText, _p10._0);
 				var numeric = _p21._0;
 				var textual = _p21._1;
+				return {
+					ctor: '_Tuple2',
+					_0: _elm_lang$core$Native_Utils.update(
+						model,
+						{ambientColour: numeric, ambientColourText: textual}),
+					_1: _elm_lang$core$Platform_Cmd$none
+				};
+			default:
+				var _p22 = A3(_user$project$Main$updateAndParseZ, model.ambientColour, model.ambientColourText, _p10._0);
+				var numeric = _p22._0;
+				var textual = _p22._1;
 				return {
 					ctor: '_Tuple2',
 					_0: _elm_lang$core$Native_Utils.update(
@@ -12327,7 +12328,9 @@ var _user$project$Main$Model = function (a) {
 													return function (n) {
 														return function (o) {
 															return function (p) {
-																return {texture: a, thetaX: b, thetaY: c, keys: d, position: e, rx: f, ry: g, lighting: h, blending: i, alpha: j, directionalColourText: k, directionalColour: l, ambientColourText: m, ambientColour: n, directionalText: o, directional: p};
+																return function (q) {
+																	return {texture: a, thetaX: b, thetaY: c, keys: d, position: e, rx: f, ry: g, lighting: h, blending: i, alpha: j, alphaText: k, directionalColourText: l, directionalColour: m, ambientColourText: n, ambientColour: o, directionalText: p, directional: q};
+																};
 															};
 														};
 													};
@@ -12384,15 +12387,14 @@ var _user$project$Main$ChangeAlpha = function (a) {
 };
 var _user$project$Main$UseBlending = {ctor: 'UseBlending'};
 var _user$project$Main$UseLighting = {ctor: 'UseLighting'};
-var _user$project$Main$view = function (_p22) {
-	var _p23 = _p22;
-	var _p29 = _p23.lighting;
-	var _p28 = _p23.directionalText;
-	var _p27 = _p23.directionalColourText;
-	var _p26 = _p23.blending;
-	var _p25 = _p23.ambientColourText;
-	var _p24 = _p23.alpha;
-	var entities = _user$project$Main$renderEntity(_user$project$Main$cube)(_p23.thetaX)(_p23.thetaY)(_p23.texture)(_p23.position)(_p29)(_p26)(_p24)(_p23.directionalColour)(_p23.directional)(_p23.ambientColour);
+var _user$project$Main$view = function (_p23) {
+	var _p24 = _p23;
+	var _p29 = _p24.lighting;
+	var _p28 = _p24.directionalText;
+	var _p27 = _p24.directionalColourText;
+	var _p26 = _p24.blending;
+	var _p25 = _p24.ambientColourText;
+	var entities = _user$project$Main$renderEntity(_user$project$Main$cube)(_p24.thetaX)(_p24.thetaY)(_p24.texture)(_p24.position)(_p29)(_p26)(_p24.alpha)(_p24.directionalColour)(_p24.directional)(_p24.ambientColour);
 	return A2(
 		_elm_lang$html$Html$div,
 		_elm_lang$core$Native_List.fromArray(
@@ -12469,8 +12471,7 @@ var _user$project$Main$view = function (_p22) {
 										_elm_lang$html$Html_Attributes$type$('text'),
 										_elm_lang$html$Html_Attributes$step('0.01'),
 										_elm_lang$html$Html_Events$onInput(_user$project$Main$ChangeAlpha),
-										_elm_lang$html$Html_Attributes$value(
-										_elm_lang$core$Basics$toString(_p24))
+										_elm_lang$html$Html_Attributes$value(_p24.alphaText)
 									]),
 								_elm_lang$core$Native_List.fromArray(
 									[]))
@@ -12720,6 +12721,7 @@ var _user$project$Main$init = {
 		lighting: true,
 		blending: true,
 		alpha: 0.5,
+		alphaText: '0.5',
 		directionalColourText: {x: '0.8', y: '0.2', z: '0.2'},
 		directionalColour: A3(_elm_community$elm_linear_algebra$Math_Vector3$vec3, 0.8, 0.2, 0.2),
 		ambientColourText: {x: '0.2', y: '0.2', z: '0.9'},
