@@ -1,21 +1,23 @@
-module Main exposing (..)
+module Main exposing (main)
 
-import Debug
-import Keyboard
+import Array
+import Browser
+import Browser.Events exposing (onAnimationFrameDelta, onKeyDown, onKeyUp)
+import Html exposing (Html, div, text)
+import Html.Attributes exposing (height, style, width)
+import Html.Events exposing (keyCode)
+import Json.Decode as Decode
+import Math.Matrix4 exposing (..)
 import Math.Vector2 exposing (Vec2)
 import Math.Vector3 exposing (..)
-import Math.Matrix4 exposing (..)
-import Task exposing (Task)
-import Time exposing (Time)
-import WebGL exposing (..)
-import Html exposing (Html, text, div)
-import Html.App as Html
-import AnimationFrame
 import Random
-import Array
-import Html.Attributes exposing (width, height, style)
+import Task exposing (Task)
+import WebGL exposing (Entity, Mesh, Shader)
+import WebGL.Settings.Blend as Blend
+import WebGL.Texture as Texture exposing (Error, Texture, defaultOptions)
 
 
+effectiveFPMS : Float
 effectiveFPMS =
     30.0 / 10000.0
 
@@ -38,11 +40,10 @@ type alias Star =
     }
 
 
-type Action
-    = TexturesError Error
-    | TexturesLoaded (Maybe Texture)
-    | KeyChange (Keys -> Keys)
-    | Animate Time
+type Msg
+    = TextureLoaded (Result Error Texture)
+    | KeyChange Bool Int
+    | Animate Float
     | RandomColorGenerated RandomColor
 
 
@@ -60,29 +61,33 @@ type alias Keys =
     }
 
 
-init : ( Model, Cmd Action )
+init : ( Model, Cmd Msg )
 init =
     ( { texture = Nothing
       , tilt = degrees 90
       , spin = 0
       , position = vec3 0 0 20
-      , stars = (initStars 50)
+      , stars = initStars 50
       , keys = Keys False False False False False False
       }
-    , Cmd.batch [ fetchTexture |> Task.perform TexturesError TexturesLoaded, randomColors 50 ]
+    , Cmd.batch
+        [ Texture.loadWith { defaultOptions | minify = Texture.linear, magnify = Texture.linear } "textures/star.gif"
+            |> Task.attempt TextureLoaded
+        , randomColors 50
+        ]
     )
 
 
 initStars : Int -> List Star
 initStars num =
-    List.map (initStar num) [1..num]
+    List.map (initStar num) (List.range 1 num)
 
 
 initStar : Int -> Int -> Star
 initStar total index =
     { angle = 0.0
-    , dist = 5.0 * toFloat (index) / toFloat (total)
-    , rotationSpeed = toFloat (index) / toFloat (total)
+    , dist = 5.0 * toFloat index / toFloat total
+    , rotationSpeed = toFloat index / toFloat total
     , color = vec3 1.0 1.0 1.0
     }
 
@@ -91,35 +96,24 @@ generator =
     Random.float 0 1
 
 
-randomColors : Int -> Cmd Action
+randomColors : Int -> Cmd Msg
 randomColors total =
-    Cmd.batch (List.concat (List.map (\c -> (List.map (\idx -> randomColor idx c) [0..total])) [0..2]))
+    Cmd.batch (List.concat (List.map (\c -> List.map (\idx -> randomColor idx c) (List.range 0 total)) (List.range 0 2)))
 
 
-randomColor : Int -> Int -> Cmd Action
+randomColor : Int -> Int -> Cmd Msg
 randomColor starIdx component =
-    (Random.generate (\res -> RandomColorGenerated { idx = starIdx, component = component, value = res }) generator)
+    Random.generate (\res -> RandomColorGenerated { idx = starIdx, component = component, value = res }) generator
 
 
-fetchTexture : Task Error (Maybe Texture)
-fetchTexture =
-    loadTextureWithFilter WebGL.Linear "textures/star.gif"
-        `Task.andThen`
-            \linearTexture ->
-                Task.succeed (Just linearTexture)
+update : Msg -> Model -> ( Model, Cmd Msg )
+update msg model =
+    case msg of
+        TextureLoaded texture ->
+            ( { model | texture = Result.toMaybe texture }, Cmd.none )
 
-
-update : Action -> Model -> ( Model, Cmd Action )
-update action model =
-    case action of
-        TexturesError err ->
-            ( model, Cmd.none )
-
-        TexturesLoaded texture ->
-            ( { model | texture = texture }, Cmd.none )
-
-        KeyChange keyfunc ->
-            ( { model | keys = keyfunc model.keys }, Cmd.none )
+        KeyChange on key ->
+            ( { model | keys = keyChange on key model.keys }, Cmd.none )
 
         Animate dt ->
             ( { model
@@ -135,8 +129,8 @@ update action model =
             , Cmd.none
             )
 
-        RandomColorGenerated randomColor ->
-            ( { model | stars = (replaceColorStars randomColor model.stars) }, Cmd.none )
+        RandomColorGenerated color ->
+            ( { model | stars = replaceColorStars color model.stars }, Cmd.none )
 
 
 replaceColorStars : RandomColor -> List Star -> List Star
@@ -145,12 +139,12 @@ replaceColorStars { idx, component, value } stars =
         newStar =
             get idx stars
     in
-        case newStar of
-            Nothing ->
-                stars
+    case newStar of
+        Nothing ->
+            stars
 
-            Just someStar ->
-                updateStarInList stars idx (replaceColor component value someStar)
+        Just someStar ->
+            updateStarInList stars idx (replaceColor component value someStar)
 
 
 get n xs =
@@ -161,13 +155,13 @@ replaceColor : Int -> Float -> Star -> Star
 replaceColor component value star =
     case component of
         0 ->
-            { star | color = (setX value star.color) }
+            { star | color = setX value star.color }
 
         1 ->
-            { star | color = (setY value star.color) }
+            { star | color = setY value star.color }
 
         2 ->
-            { star | color = (setZ value star.color) }
+            { star | color = setZ value star.color }
 
         _ ->
             star
@@ -176,13 +170,14 @@ replaceColor component value star =
 updateStarInList : List Star -> Int -> Star -> List Star
 updateStarInList list indexToUpdate star =
     let
-        update index prevStar =
+        updateEl index prevStar =
             if index == indexToUpdate then
                 star
+
             else
                 prevStar
     in
-        List.indexedMap update list
+    List.indexedMap updateEl list
 
 
 updateStar : Float -> Star -> Star
@@ -192,6 +187,7 @@ updateStar dt star =
         , dist =
             if star.dist < 0.0 then
                 star.dist + 5.0
+
             else
                 star.dist - 0.1 * dt * effectiveFPMS
     }
@@ -211,7 +207,7 @@ rotateX k velocity =
                 _ ->
                     0
     in
-        velocity + direction
+    velocity + direction
 
 
 move : { keys | w : Bool, s : Bool } -> Vec3 -> Vec3
@@ -228,56 +224,54 @@ move k position =
                 _ ->
                     0
     in
-        position `add` (vec3 0 0 direction)
+    add position (vec3 0 0 direction)
 
 
-main : Program Never
+main : Program () Model Msg
 main =
-    Html.program
-        { init = init
+    Browser.element
+        { init = \_ -> init
         , view = view
         , subscriptions = subscriptions
         , update = update
         }
 
 
-subscriptions : Model -> Sub Action
+subscriptions : Model -> Sub Msg
 subscriptions _ =
-    [ AnimationFrame.diffs Animate
-    , Keyboard.downs (keyChange True)
-    , Keyboard.ups (keyChange False)
+    [ onAnimationFrameDelta Animate
+    , onKeyDown (Decode.map (KeyChange True) keyCode)
+    , onKeyUp (Decode.map (KeyChange False) keyCode)
     ]
         |> Sub.batch
 
 
-keyChange : Bool -> Keyboard.KeyCode -> Action
-keyChange on keyCode =
-    (case keyCode of
+keyChange : Bool -> Int -> Keys -> Keys
+keyChange on keyCode k =
+    case keyCode of
         38 ->
-            \k -> { k | up = on }
+            { k | up = on }
 
         40 ->
-            \k -> { k | down = on }
+            { k | down = on }
 
         87 ->
-            \k -> { k | w = on }
+            { k | w = on }
 
         83 ->
-            \k -> { k | s = on }
+            { k | s = on }
 
         _ ->
-            Basics.identity
-    )
-        |> KeyChange
+            k
 
 
 
 -- MESHES
 
 
-starMesh : Drawable { position : Vec3, coord : Vec3 }
+starMesh : Mesh { position : Vec3, coord : Vec3 }
 starMesh =
-    Triangle
+    WebGL.triangles
         [ ( { position = vec3 -1 1 0, coord = vec3 0 1 0 }
           , { position = vec3 1 1 0, coord = vec3 1 1 0 }
           , { position = vec3 -1 -1 0, coord = vec3 0 0 0 }
@@ -293,27 +287,25 @@ starMesh =
 -- VIEW
 
 
-view : Model -> Html Action
+view : Model -> Html Msg
 view { texture, position, tilt, stars, spin } =
     let
         entities =
             List.concat (List.map (renderStar tilt texture position spin) stars)
     in
-        div
-            []
-            [ WebGL.toHtml
-                [ width 500, height 500, style [ ( "backgroundColor", "black" ) ] ]
-                entities
-            , div
-                [ style
-                    [ ( "font-family", "monospace" )
-                    , ( "left", "20px" )
-                    , ( "right", "20px" )
-                    , ( "top", "500px" )
-                    ]
-                ]
-                [ text message ]
+    div
+        []
+        [ WebGL.toHtml
+            [ width 500, height 500, style "background" "black" ]
+            entities
+        , div
+            [ style "font-family" "monospace"
+            , style "left" "20px"
+            , style "right" "20px"
+            , style "top" "500px"
             ]
+            [ text message ]
+        ]
 
 
 message : String
@@ -321,25 +313,31 @@ message =
     "Up/Down rotate, w/s -> move camera in/out"
 
 
-renderStar : Float -> Maybe Texture -> Vec3 -> Float -> Star -> List Renderable
+renderStar : Float -> Maybe Texture -> Vec3 -> Float -> Star -> List Entity
 renderStar tilt texture position spin star =
     renderEntity starMesh tilt texture position spin star
 
 
-renderEntity : Drawable { position : Vec3, coord : Vec3 } -> Float -> Maybe Texture -> Vec3 -> Float -> Star -> List Renderable
+renderEntity : Mesh { position : Vec3, coord : Vec3 } -> Float -> Maybe Texture -> Vec3 -> Float -> Star -> List Entity
 renderEntity mesh tilt texture position spin star =
     case texture of
         Nothing ->
             []
 
         Just tex ->
-            [ renderWithConfig [ Enable Blend, Disable DepthTest, BlendFunc ( SrcAlpha, One ) ] vertexShader fragmentShader mesh (uniformsStar tilt tex position spin star) ]
+            [ WebGL.entityWith [ Blend.add Blend.srcAlpha Blend.one ] vertexShader fragmentShader mesh (uniformsStar tilt tex position spin star) ]
 
 
 uniformsStar : Float -> Texture -> Vec3 -> Float -> Star -> { texture : Texture, perspective : Mat4, camera : Mat4, worldSpace : Mat4, color : Vec3 }
 uniformsStar tilt texture position spin { dist, rotationSpeed, color, angle } =
     { texture = texture
-    , worldSpace = makeRotate tilt (vec3 1 0 0) `mul` makeRotate angle (vec3 0 1 0) `mul` makeTranslate (vec3 dist 0 0) `mul` makeRotate angle (vec3 0 -1 0) `mul` makeRotate tilt (vec3 -1 0 0) `mul` makeRotate spin (vec3 0 0 1)
+    , worldSpace =
+        makeRotate spin (vec3 0 0 1)
+            |> mul (makeRotate tilt (vec3 -1 0 0))
+            |> mul (makeRotate angle (vec3 0 -1 0))
+            |> mul (makeTranslate (vec3 dist 0 0))
+            |> mul (makeRotate angle (vec3 0 1 0))
+            |> mul (makeRotate tilt (vec3 1 0 0))
     , camera = makeLookAt position (vec3 0 0 -1) (vec3 0 1 0)
     , perspective = makePerspective 45 1 0.01 100
     , color = color

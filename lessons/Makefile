@@ -5,4 +5,4 @@ all: $(HTMLS)
 	@echo Everything done, sir
 
 %.html: %.elm
-	elm-make $< --output ../out/$@
+	elm make $< --output ../out/$@ --optimize
