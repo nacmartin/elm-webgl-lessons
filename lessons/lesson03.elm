@@ -1,24 +1,25 @@
-module Main exposing (..)
-
-import Math.Vector3 exposing (..)
-import Math.Matrix4 exposing (..)
-import WebGL exposing (..)
-import Html exposing (Html)
-import Html.App as Html
-import Html.Attributes exposing (width, height, style)
-import AnimationFrame
-
+module Main exposing (main)
 
 -- Create a mesh with a triangle and a square
+-- Uses varyings to interpolate colors
+-- Uses uniforms to animate the scene
+
+import Browser
+import Browser.Events exposing (onAnimationFrameDelta)
+import Html exposing (Html)
+import Html.Attributes exposing (height, style, width)
+import Math.Matrix4 exposing (..)
+import Math.Vector3 exposing (..)
+import WebGL exposing (Mesh, Shader)
 
 
 type alias Vertex =
     { position : Vec3, color : Vec3 }
 
 
-triangle : Drawable Vertex
+triangle : Mesh Vertex
 triangle =
-    Triangle
+    WebGL.triangles
         [ ( Vertex (vec3 0 1 0) (vec3 1 0 0)
           , Vertex (vec3 -1 -1 0) (vec3 0 1 0)
           , Vertex (vec3 1 -1 0) (vec3 0 0 1)
@@ -26,9 +27,9 @@ triangle =
         ]
 
 
-square : Drawable Vertex
+square : Mesh Vertex
 square =
-    TriangleStrip
+    WebGL.triangleStrip
         [ Vertex (vec3 1 1 0) (vec3 0.5 0.5 1)
         , Vertex (vec3 -1 1 0) (vec3 0.5 0.5 1)
         , Vertex (vec3 1 -1 0) (vec3 0.5 0.5 1)
@@ -36,13 +37,13 @@ square =
         ]
 
 
-main : Program Never
+main : Program () Float Float
 main =
-    Html.program
-        { init = ( 0, Cmd.none )
+    Browser.element
+        { init = \_ -> ( 0, Cmd.none )
         , view = view
-        , subscriptions = (\model -> AnimationFrame.diffs Basics.identity)
-        , update = (\elapsed currentTime -> ( elapsed + currentTime, Cmd.none ))
+        , subscriptions = \_ -> onAnimationFrameDelta Basics.identity
+        , update = \elapsed currentTime -> ( elapsed + currentTime, Cmd.none )
         }
 
 
@@ -53,10 +54,13 @@ main =
 view : Float -> Html msg
 view t =
     WebGL.toHtml
-        [ width 400, height 400, style [ ( "backgroundColor", "black" ) ] ]
-        ([ render vertexShader fragmentShader triangle { displacement = vec3 -1.5 0 0, perspective = perspectiveTriangle (t / 1000) } ]
-            ++ [ render vertexShader fragmentShader square { displacement = vec3 1.5 0 0, perspective = perspectiveSquare (t / 1000) } ]
-        )
+        [ width 400
+        , height 400
+        , style "background" "black"
+        ]
+        [ WebGL.entity vertexShader fragmentShader triangle { displacement = vec3 -1.5 0 0, perspective = perspectiveTriangle (t / 1000) }
+        , WebGL.entity vertexShader fragmentShader square { displacement = vec3 1.5 0 0, perspective = perspectiveSquare (t / 1000) }
+        ]
 
 
 perspectiveTriangle : Float -> Mat4

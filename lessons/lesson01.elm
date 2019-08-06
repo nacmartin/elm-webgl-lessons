@@ -1,22 +1,20 @@
-module Main exposing (..)
-
-import Math.Vector3 exposing (..)
-import WebGL exposing (..)
-import Html exposing (Html)
-import Html.App as Html
-import Html.Attributes exposing (width, height, style)
-
+module Main exposing (main)
 
 -- Create a mesh with a triangle and a square
+
+import Html exposing (Html)
+import Html.Attributes exposing (height, style, width)
+import Math.Vector3 exposing (..)
+import WebGL exposing (Mesh, Shader)
 
 
 type alias Vertex =
     { position : Vec3 }
 
 
-triangle : Drawable Vertex
+triangle : Mesh Vertex
 triangle =
-    WebGL.Triangle
+    WebGL.triangles
         [ ( { position = vec3 0 1 0 }
           , { position = vec3 -1 -1 0 }
           , { position = vec3 1 -1 0 }
@@ -24,24 +22,26 @@ triangle =
         ]
 
 
-square : Drawable Vertex
+square : Mesh Vertex
 square =
-    WebGL.TriangleStrip
-        ([ { position = vec3 1 1 0 }
-         , { position = vec3 -1 1 0 }
-         , { position = vec3 1 -1 0 }
-         , { position = vec3 -1 -1 0 }
-         ]
-        )
+    WebGL.triangleStrip
+        [ { position = vec3 1 1 0 }
+        , { position = vec3 -1 1 0 }
+        , { position = vec3 1 -1 0 }
+        , { position = vec3 -1 -1 0 }
+        ]
 
 
 main : Html msg
 main =
     WebGL.toHtml
-        [ width 400, height 400, style [ ( "backgroundColor", "black" ) ] ]
-        ([ render vertexShader fragmentShader square { displacement = vec3 -1.5 0 0 } ]
-            ++ [ render vertexShader fragmentShader triangle { displacement = vec3 1.5 0 0 } ]
-        )
+        [ width 400
+        , height 400
+        , style "background" "black"
+        ]
+        [ WebGL.entity vertexShader fragmentShader square { displacement = vec3 -1.5 0 0 }
+        , WebGL.entity vertexShader fragmentShader triangle { displacement = vec3 1.5 0 0 }
+        ]
 
 
 
