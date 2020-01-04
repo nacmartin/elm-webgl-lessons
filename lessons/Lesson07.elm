@@ -441,7 +441,7 @@ renderEntity mesh thetaX thetaY texture position lighting directionalColour dire
             [ WebGL.entity vertexShader fragmentShader mesh (uniformsCube thetaX thetaY tex position lighting directionalColour directional ambientColour) ]
 
 
-uniformsCube : Float -> Float -> Texture -> Vec3 -> Bool -> Vec3 -> Vec3 -> Vec3 -> { texture : Texture, worldSpace : Mat4, perspective : Mat4, camera : Mat4, normalMatrix : Mat4, lighting : Bool, directionalColour : Vec3, ambientColour : Vec3, directional : Vec3 }
+uniformsCube : Float -> Float -> Texture -> Vec3 -> Bool -> Vec3 -> Vec3 -> Vec3 -> { texture : Texture, worldSpace : Mat4, perspective : Mat4, camera : Mat4, normalMatrix : Mat4, lighting : Int, directionalColour : Vec3, ambientColour : Vec3, directional : Vec3 }
 uniformsCube tx ty texture displacement lighting directionalColour directional ambientColour =
     let
         worldSpace =
@@ -452,13 +452,20 @@ uniformsCube tx ty texture displacement lighting directionalColour directional a
 
         perspective =
             makePerspective 45 1 0.1 100
+
+        boolToInt bool =
+            if bool then
+                1
+
+            else
+                0
     in
     { texture = texture
     , worldSpace = worldSpace
     , perspective = perspective
     , camera = camera
     , normalMatrix = transpose (inverseOrthonormal worldSpace)
-    , lighting = lighting
+    , lighting = boolToInt lighting
     , directionalColour = directionalColour
     , ambientColour = ambientColour
     , directional = directional
@@ -469,7 +476,7 @@ uniformsCube tx ty texture displacement lighting directionalColour directional a
 -- SHADERS
 
 
-vertexShader : Shader { attr | position : Vec3, coord : Vec3, norm : Vec3 } { unif | worldSpace : Mat4, perspective : Mat4, camera : Mat4, normalMatrix : Mat4, lighting : Bool, directionalColour : Vec3, ambientColour : Vec3, directional : Vec3 } { vcoord : Vec2, lightWeighting : Vec3 }
+vertexShader : Shader { attr | position : Vec3, coord : Vec3, norm : Vec3 } { unif | worldSpace : Mat4, perspective : Mat4, camera : Mat4, normalMatrix : Mat4, lighting : Int, directionalColour : Vec3, ambientColour : Vec3, directional : Vec3 } { vcoord : Vec2, lightWeighting : Vec3 }
 vertexShader =
     [glsl|
 
@@ -483,7 +490,7 @@ vertexShader =
   uniform mat4 perspective;
   uniform mat4 normalMatrix;
   uniform mat4 camera;
-  uniform bool lighting;
+  uniform int lighting;
   uniform vec3 directionalColour;
   uniform vec3 directional;
   uniform vec3 ambientColour;
@@ -495,7 +502,7 @@ vertexShader =
     gl_Position = perspective * camera * worldSpace * vec4(position, 1.0);
     vcoord = coord.xy;
 
-    if (!lighting) {
+    if (lighting == 0) {
       lightWeighting = vec3(1.0, 1.0, 1.0);
     } else {
       vec4 transformedNormal = normalMatrix * vec4(norm, 0.0);

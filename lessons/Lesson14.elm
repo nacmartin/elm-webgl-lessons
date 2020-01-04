@@ -411,7 +411,7 @@ renderEntity world theta shininess texture position useLighting useSpecular useT
             [ WebGL.entity vertexShader fragmentShader world (uniforms tex theta shininess position useLighting useSpecular useTextures specularColor specular ambientColor diffuseColor) ]
 
 
-uniforms : Texture -> Float -> Float -> Vec3 -> Bool -> Bool -> Bool -> Vec3 -> Vec3 -> Vec3 -> Vec3 -> { texture : Texture, perspective : Mat4, camera : Mat4, worldSpace : Mat4, useLighting : Bool, normalMatrix : Mat4, useSpecular : Bool, useTextures : Bool, specularColor : Vec3, ambientColor : Vec3, diffuseColor : Vec3, specular : Vec3, shininess : Float }
+uniforms : Texture -> Float -> Float -> Vec3 -> Bool -> Bool -> Bool -> Vec3 -> Vec3 -> Vec3 -> Vec3 -> { texture : Texture, perspective : Mat4, camera : Mat4, worldSpace : Mat4, useLighting : Int, normalMatrix : Mat4, useSpecular : Int, useTextures : Int, specularColor : Vec3, ambientColor : Vec3, diffuseColor : Vec3, specular : Vec3, shininess : Float }
 uniforms texture theta shininess position useLighting useSpecular useTextures specularColor specular ambientColor diffuseColor =
     let
         worldSpace =
@@ -422,15 +422,22 @@ uniforms texture theta shininess position useLighting useSpecular useTextures sp
 
         perspective =
             makePerspective 45 1 0.1 100
+
+        boolToInt bool =
+            if bool then
+                1
+
+            else
+                0
     in
     { texture = texture
     , worldSpace = worldSpace
     , camera = camera
     , perspective = perspective
     , normalMatrix = transpose (inverseOrthonormal worldSpace)
-    , useLighting = useLighting
-    , useSpecular = useSpecular
-    , useTextures = useTextures
+    , useLighting = boolToInt useLighting
+    , useSpecular = boolToInt useSpecular
+    , useTextures = boolToInt useTextures
     , specularColor = specularColor
     , ambientColor = ambientColor
     , diffuseColor = diffuseColor
@@ -472,15 +479,15 @@ vertexShader =
 |]
 
 
-fragmentShader : Shader {} { unif | texture : Texture, useSpecular : Bool, useLighting : Bool, useTextures : Bool, ambientColor : Vec3, specularColor : Vec3, diffuseColor : Vec3, specular : Vec3, shininess : Float } { vcoord : Vec2, vPosition : Vec3, vTransformedNormal : Vec3 }
+fragmentShader : Shader {} { unif | texture : Texture, useSpecular : Int, useLighting : Int, useTextures : Int, ambientColor : Vec3, specularColor : Vec3, diffuseColor : Vec3, specular : Vec3, shininess : Float } { vcoord : Vec2, vPosition : Vec3, vTransformedNormal : Vec3 }
 fragmentShader =
     [glsl|
   precision mediump float;
 
   uniform sampler2D texture;
-  uniform bool useLighting;
-  uniform bool useSpecular;
-  uniform bool useTextures;
+  uniform int useLighting;
+  uniform int useSpecular;
+  uniform int useTextures;
   uniform vec3 ambientColor;
   uniform vec3 diffuseColor;
   uniform vec3 specularColor;
@@ -494,7 +501,7 @@ fragmentShader =
   void main () {
       vec3 lightWeighting;
       lightWeighting = vec3(1.0, 1.0, 1.0);
-      if (!useLighting) {
+      if (useLighting == 0) {
         lightWeighting = vec3(1.0, 1.0, 1.0);
       } else {
 
@@ -502,7 +509,7 @@ fragmentShader =
         vec3 normal = normalize(vTransformedNormal);
 
         float specularLightWeighting = 0.0;
-        if (useSpecular) {
+        if (useSpecular == 1) {
             vec3 eyeDirection = normalize(-vPosition.xyz);
             vec3 reflectionDirection = reflect(-lightDirection, normal);
 
@@ -515,7 +522,7 @@ fragmentShader =
             + diffuseColor * diffuseLightWeighting;
       }
       vec4 fragmentColor;
-      if (useTextures) {
+      if (useTextures == 1) {
         fragmentColor = texture2D(texture, vec2(vcoord.s, vcoord.t));
       } else {
         fragmentColor = vec4(1.0, 1.0, 1.0, 1.0);

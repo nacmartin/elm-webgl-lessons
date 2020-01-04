@@ -387,7 +387,7 @@ renderEntity theta textures position useLighting useSpecularMap useColorMap spec
             []
 
 
-uniforms : Texture -> Texture -> Float -> Vec3 -> Bool -> Bool -> Bool -> Vec3 -> Vec3 -> Vec3 -> Vec3 -> { colorMap : Texture, specularMap : Texture, perspective : Mat4, camera : Mat4, worldSpace : Mat4, useLighting : Bool, normalMatrix : Mat4, useSpecularMap : Bool, useColorMap : Bool, specularColor : Vec3, ambientColor : Vec3, diffuseColor : Vec3, specular : Vec3 }
+uniforms : Texture -> Texture -> Float -> Vec3 -> Bool -> Bool -> Bool -> Vec3 -> Vec3 -> Vec3 -> Vec3 -> { colorMap : Texture, specularMap : Texture, perspective : Mat4, camera : Mat4, worldSpace : Mat4, useLighting : Int, normalMatrix : Mat4, useSpecularMap : Int, useColorMap : Int, specularColor : Vec3, ambientColor : Vec3, diffuseColor : Vec3, specular : Vec3 }
 uniforms colorMap specularMap theta position useLighting useSpecularMap useColorMap specularColor specular ambientColor diffuseColor =
     let
         worldSpace =
@@ -398,6 +398,13 @@ uniforms colorMap specularMap theta position useLighting useSpecularMap useColor
 
         perspective =
             makePerspective 45 1 0.1 100
+
+        boolToInt bool =
+            if bool then
+                1
+
+            else
+                0
     in
     { colorMap = colorMap
     , specularMap = specularMap
@@ -405,9 +412,9 @@ uniforms colorMap specularMap theta position useLighting useSpecularMap useColor
     , camera = camera
     , perspective = perspective
     , normalMatrix = transpose (inverseOrthonormal worldSpace)
-    , useLighting = useLighting
-    , useSpecularMap = useSpecularMap
-    , useColorMap = useColorMap
+    , useLighting = boolToInt useLighting
+    , useSpecularMap = boolToInt useSpecularMap
+    , useColorMap = boolToInt useColorMap
     , specularColor = specularColor
     , ambientColor = ambientColor
     , diffuseColor = diffuseColor
@@ -448,16 +455,16 @@ vertexShader =
 |]
 
 
-fragmentShader : Shader {} { unif | colorMap : Texture, specularMap : Texture, useSpecularMap : Bool, useLighting : Bool, useColorMap : Bool, ambientColor : Vec3, specularColor : Vec3, diffuseColor : Vec3, specular : Vec3 } { vcoord : Vec2, vPosition : Vec3, vTransformedNormal : Vec3 }
+fragmentShader : Shader {} { unif | colorMap : Texture, specularMap : Texture, useSpecularMap : Int, useLighting : Int, useColorMap : Int, ambientColor : Vec3, specularColor : Vec3, diffuseColor : Vec3, specular : Vec3 } { vcoord : Vec2, vPosition : Vec3, vTransformedNormal : Vec3 }
 fragmentShader =
     [glsl|
   precision mediump float;
 
   uniform sampler2D colorMap;
   uniform sampler2D specularMap;
-  uniform bool useLighting;
-  uniform bool useSpecularMap;
-  uniform bool useColorMap;
+  uniform int useLighting;
+  uniform int useSpecularMap;
+  uniform int useColorMap;
   uniform vec3 ambientColor;
   uniform vec3 diffuseColor;
   uniform vec3 specularColor;
@@ -470,7 +477,7 @@ fragmentShader =
   void main () {
       vec3 lightWeighting;
       lightWeighting = vec3(1.0, 1.0, 1.0);
-      if (!useLighting) {
+      if (useLighting == 0) {
         lightWeighting = vec3(1.0, 1.0, 1.0);
       } else {
 
@@ -479,7 +486,7 @@ fragmentShader =
 
         float specularLightWeighting = 0.0;
         float shininess = 32.0;
-        if (useSpecularMap) {
+        if (useSpecularMap == 1) {
             shininess = texture2D(specularMap, vec2(vcoord.s, vcoord.t)).r * 255.0;
         }
         if (shininess < 255.0) {
@@ -495,7 +502,7 @@ fragmentShader =
             + diffuseColor * diffuseLightWeighting;
       }
       vec4 fragmentColor;
-      if (useColorMap) {
+      if (useColorMap == 1) {
         fragmentColor = texture2D(colorMap, vec2(vcoord.s, vcoord.t));
       } else {
         fragmentColor = vec4(1.0, 1.0, 1.0, 1.0);

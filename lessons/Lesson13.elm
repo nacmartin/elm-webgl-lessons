@@ -406,7 +406,7 @@ renderEntity mesh theta texture position useLighting useTextures usePerFragment 
             WebGL.entity vertexShaderPV fragmentShaderPV mesh (uniformsShpere theta texture position useLighting useTextures pointColour point ambientColour)
 
 
-uniformsShpere : Float -> Texture -> Vec3 -> Bool -> Bool -> Vec3 -> Vec3 -> Vec3 -> { texture : Texture, worldSpace : Mat4, perspective : Mat4, camera : Mat4, normalMatrix : Mat4, useLighting : Bool, useTextures : Bool, pointColour : Vec3, ambientColour : Vec3, point : Vec3 }
+uniformsShpere : Float -> Texture -> Vec3 -> Bool -> Bool -> Vec3 -> Vec3 -> Vec3 -> { texture : Texture, worldSpace : Mat4, perspective : Mat4, camera : Mat4, normalMatrix : Mat4, useLighting : Int, useTextures : Int, pointColour : Vec3, ambientColour : Vec3, point : Vec3 }
 uniformsShpere tx texture displacement useLighting useTextures pointColour point ambientColour =
     let
         worldSpace =
@@ -417,14 +417,21 @@ uniformsShpere tx texture displacement useLighting useTextures pointColour point
 
         perspective =
             makePerspective 45 1 0.1 100
+
+        boolToInt bool =
+            if bool then
+                1
+
+            else
+                0
     in
     { texture = texture
     , worldSpace = worldSpace
     , perspective = perspective
     , camera = camera
     , normalMatrix = transpose (inverseOrthonormal worldSpace)
-    , useLighting = useLighting
-    , useTextures = useTextures
+    , useLighting = boolToInt useLighting
+    , useTextures = boolToInt useTextures
     , pointColour = pointColour
     , ambientColour = ambientColour
     , point = point
@@ -464,14 +471,14 @@ vertexShaderPF =
 |]
 
 
-fragmentShaderPF : Shader {} { unif | texture : Texture, useLighting : Bool, useTextures : Bool, ambientColour : Vec3, pointColour : Vec3, point : Vec3 } { vcoord : Vec2, vPosition : Vec3, vTransformedNormal : Vec3 }
+fragmentShaderPF : Shader {} { unif | texture : Texture, useLighting : Int, useTextures : Int, ambientColour : Vec3, pointColour : Vec3, point : Vec3 } { vcoord : Vec2, vPosition : Vec3, vTransformedNormal : Vec3 }
 fragmentShaderPF =
     [glsl|
   precision mediump float;
 
   uniform sampler2D texture;
-  uniform bool useLighting;
-  uniform bool useTextures;
+  uniform int useLighting;
+  uniform int useTextures;
   uniform vec3 ambientColour;
   uniform vec3 pointColour;
   uniform vec3 point;
@@ -483,7 +490,7 @@ fragmentShaderPF =
   void main () {
       vec3 lightWeighting;
       lightWeighting = vec3(1.0, 1.0, 1.0);
-      if (!useLighting) {
+      if (useLighting == 0) {
         lightWeighting = vec3(1.0, 1.0, 1.0);
       } else {
         vec3 lightDirection = normalize(point - vPosition );
@@ -492,7 +499,7 @@ fragmentShaderPF =
         lightWeighting = ambientColour + pointColour * directionalLightWeighting;
       }
       vec4 fragmentColor;
-      if (useTextures) {
+      if (useTextures == 1) {
         fragmentColor = texture2D(texture, vec2(vcoord.s, vcoord.t));
       } else {
         fragmentColor = vec4(1.0, 1.0, 1.0, 1.0);
@@ -504,7 +511,7 @@ fragmentShaderPF =
 |]
 
 
-vertexShaderPV : Shader { attr | position : Vec3, coord : Vec3, norm : Vec3 } { unif | worldSpace : Mat4, perspective : Mat4, camera : Mat4, normalMatrix : Mat4, useLighting : Bool, pointColour : Vec3, ambientColour : Vec3, point : Vec3 } { vcoord : Vec2, lightWeighting : Vec3 }
+vertexShaderPV : Shader { attr | position : Vec3, coord : Vec3, norm : Vec3 } { unif | worldSpace : Mat4, perspective : Mat4, camera : Mat4, normalMatrix : Mat4, useLighting : Int, pointColour : Vec3, ambientColour : Vec3, point : Vec3 } { vcoord : Vec2, lightWeighting : Vec3 }
 vertexShaderPV =
     [glsl|
 
@@ -518,7 +525,7 @@ vertexShaderPV =
   uniform mat4 perspective;
   uniform mat4 normalMatrix;
   uniform mat4 camera;
-  uniform bool useLighting;
+  uniform int useLighting;
   uniform vec3 pointColour;
   uniform vec3 point;
   uniform vec3 ambientColour;
@@ -531,7 +538,7 @@ vertexShaderPV =
     gl_Position = perspective * camera * mvPosition;
     vcoord = coord.xy;
 
-    if (!useLighting) {
+    if (useLighting == 0) {
       lightWeighting = vec3(1.0, 1.0, 1.0);
     } else {
       vec3 transformedNormal = vec3(normalMatrix * vec4(norm, 0.0));
@@ -543,20 +550,20 @@ vertexShaderPV =
 |]
 
 
-fragmentShaderPV : Shader {} { unif | texture : Texture, useTextures : Bool } { vcoord : Vec2, lightWeighting : Vec3 }
+fragmentShaderPV : Shader {} { unif | texture : Texture, useTextures : Int } { vcoord : Vec2, lightWeighting : Vec3 }
 fragmentShaderPV =
     [glsl|
   precision mediump float;
 
   uniform sampler2D texture;
-  uniform bool useTextures;
+  uniform int useTextures;
 
   varying vec2 vcoord;
   varying vec3 lightWeighting;
 
   void main () {
       vec4 fragmentColor;
-      if (useTextures) {
+      if (useTextures == 1) {
         fragmentColor = texture2D(texture, vec2(vcoord.s, vcoord.t));
       } else {
         fragmentColor = vec4(1.0, 1.0, 1.0, 1.0);
