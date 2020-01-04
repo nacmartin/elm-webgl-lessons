@@ -1,40 +1,40 @@
-module Main exposing (main)
+module Lesson08 exposing (main)
 
 import Browser
-import Browser.Events exposing (onMouseDown, onMouseMove, onMouseUp)
+import Browser.Events exposing (onAnimationFrameDelta, onKeyDown, onKeyUp)
 import Html exposing (Html, div, h2, input, text)
 import Html.Attributes exposing (checked, height, step, style, type_, value, width)
-import Html.Events exposing (onClick, onInput)
-import Json.Decode as Decode exposing (Decoder)
+import Html.Events exposing (keyCode, onClick, onInput)
+import Json.Decode as Decode
 import Math.Matrix4 exposing (..)
 import Math.Vector2 exposing (Vec2)
 import Math.Vector3 exposing (..)
-import String
+import String exposing (toFloat)
 import Task exposing (Task)
 import WebGL exposing (Entity, Mesh, Shader)
-import WebGL.Texture as Texture exposing (Error, Texture)
+import WebGL.Settings.Blend as Blend
+import WebGL.Settings.DepthTest as DepthTest
+import WebGL.Texture as Texture exposing (Error, Texture, defaultOptions)
 
 
 type alias Model =
     { texture : Maybe Texture
-    , position : Vec3
-    , lighting : Bool
     , thetaX : Float
     , thetaY : Float
-    , mouseStatus : MouseStatus
+    , keys : Keys
+    , position : Vec3
+    , rx : Float
+    , ry : Float
+    , lighting : Bool
+    , blending : Bool
+    , alpha : Float
+    , alphaText : String
     , directionalColourText : { x : String, y : String, z : String }
     , directionalColour : Vec3
     , ambientColourText : { x : String, y : String, z : String }
     , ambientColour : Vec3
     , directionalText : { x : String, y : String, z : String }
     , directional : Vec3
-    }
-
-
-type alias MouseStatus =
-    { pressed : Bool
-    , x : Int
-    , y : Int
     }
 
 
@@ -47,10 +47,11 @@ type alias Triplet =
 
 type Msg
     = TextureLoaded (Result Error Texture)
-    | MouseDown { x : Int, y : Int }
-    | MouseMove { x : Int, y : Int }
-    | MouseUp { x : Int, y : Int }
+    | KeyChange Bool Int
+    | Animate Float
     | UseLighting
+    | UseBlending
+    | ChangeAlpha String
     | ChangeDirectionalColourR String
     | ChangeDirectionalColourG String
     | ChangeDirectionalColourB String
@@ -62,22 +63,38 @@ type Msg
     | ChangeDirectionalZ String
 
 
+type alias Keys =
+    { left : Bool
+    , right : Bool
+    , up : Bool
+    , down : Bool
+    , w : Bool
+    , s : Bool
+    }
+
+
 init : ( Model, Cmd Msg )
 init =
     ( { texture = Nothing
       , thetaX = 0
       , thetaY = 0
+      , rx = 0
+      , ry = 0
+      , keys = Keys False False False False False False
       , position = vec3 0 0 -4
       , lighting = True
-      , mouseStatus = MouseStatus False 0 0
-      , directionalColourText = { x = "1", y = "1", z = "1" }
-      , directionalColour = vec3 1 1 1
-      , ambientColourText = { x = "0.2", y = "0.2", z = "0.2" }
-      , ambientColour = vec3 0.2 0.2 0.2
-      , directionalText = { x = "1", y = "1", z = "1" }
-      , directional = vec3 1 1 1
+      , blending = True
+      , alpha = 0.5
+      , alphaText = "0.5"
+      , directionalColourText = { x = "0.8", y = "0.2", z = "0.2" }
+      , directionalColour = vec3 0.8 0.2 0.2
+      , ambientColourText = { x = "0.2", y = "0.2", z = "0.9" }
+      , ambientColour = vec3 0.2 0.2 0.8
+      , directionalText = { x = "-0.25", y = "0.25", z = "-1" }
+      , directional = vec3 -0.25 -0.25 -1
       }
-    , Task.attempt TextureLoaded (Texture.load "textures/moon.gif")
+    , Texture.loadWith { defaultOptions | minify = Texture.nearest } "textures/glass.gif"
+        |> Task.attempt TextureLoaded
     )
 
 
@@ -87,17 +104,43 @@ update msg model =
         TextureLoaded texture ->
             ( { model | texture = Result.toMaybe texture }, Cmd.none )
 
-        MouseDown pos ->
-            ( mouseDown pos model, Cmd.none )
+        KeyChange on key ->
+            ( { model | keys = keyChange on key model.keys }, Cmd.none )
 
-        MouseMove pos ->
-            ( mouseMove pos model, Cmd.none )
-
-        MouseUp pos ->
-            ( mouseUp pos model, Cmd.none )
+        Animate dt ->
+            ( { model
+                | thetaX = model.thetaX + model.rx * dt / 1000
+                , thetaY = model.thetaY + model.ry * dt / 1000
+                , position =
+                    model.position
+                        |> move model.keys
+                , rx =
+                    model.rx
+                        |> rotateX model.keys
+                , ry =
+                    model.ry
+                        |> rotateY model.keys
+              }
+            , Cmd.none
+            )
 
         UseLighting ->
             ( { model | lighting = not model.lighting }, Cmd.none )
+
+        UseBlending ->
+            ( { model | blending = not model.blending }, Cmd.none )
+
+        ChangeAlpha value ->
+            let
+                parsed =
+                    case String.toFloat value of
+                        Just val ->
+                            val
+
+                        _ ->
+                            model.alpha
+            in
+            ( { model | alpha = parsed, alphaText = value }, Cmd.none )
 
         ChangeDirectionalX value ->
             let
@@ -199,6 +242,57 @@ parse default text =
         |> Maybe.withDefault default
 
 
+rotateX : { keys | right : Bool, left : Bool } -> Float -> Float
+rotateX k velocity =
+    let
+        direction =
+            case ( k.right, k.left ) of
+                ( True, False ) ->
+                    0.1
+
+                ( False, True ) ->
+                    -0.1
+
+                _ ->
+                    0
+    in
+    velocity + direction
+
+
+rotateY : { keys | up : Bool, down : Bool } -> Float -> Float
+rotateY k velocity =
+    let
+        direction =
+            case ( k.up, k.down ) of
+                ( True, False ) ->
+                    0.1
+
+                ( False, True ) ->
+                    -0.1
+
+                _ ->
+                    0
+    in
+    velocity + direction
+
+
+move : { keys | w : Bool, s : Bool } -> Vec3 -> Vec3
+move k position =
+    let
+        direction =
+            case ( k.w, k.s ) of
+                ( True, False ) ->
+                    0.1
+
+                ( False, True ) ->
+                    -0.1
+
+                _ ->
+                    0
+    in
+    add position (vec3 0 0 direction)
+
+
 main : Program () Model Msg
 main =
     Browser.element
@@ -212,101 +306,84 @@ main =
 subscriptions : Model -> Sub Msg
 subscriptions _ =
     Sub.batch
-        [ onMouseDown (mousePosition MouseDown)
-        , onMouseUp (mousePosition MouseUp)
-        , onMouseMove (mousePosition MouseMove)
+        [ onAnimationFrameDelta Animate
+        , onKeyDown (Decode.map (KeyChange True) keyCode)
+        , onKeyUp (Decode.map (KeyChange False) keyCode)
         ]
 
 
-mouseDown : { x : Int, y : Int } -> Model -> Model
-mouseDown { x, y } m =
-    { m | mouseStatus = { x = x, y = y, pressed = True } }
+keyChange : Bool -> Int -> Keys -> Keys
+keyChange on keyCode k =
+    case keyCode of
+        37 ->
+            { k | left = on }
 
+        39 ->
+            { k | right = on }
 
-mouseMove : { x : Int, y : Int } -> Model -> Model
-mouseMove { x, y } m =
-    case m.mouseStatus.pressed of
-        False ->
-            m
+        38 ->
+            { k | up = on }
 
-        True ->
-            { m
-                | mouseStatus = { x = x, y = y, pressed = True }
-                , thetaX = m.thetaX + degrees (Basics.toFloat (x - m.mouseStatus.x))
-                , thetaY = m.thetaY + degrees (Basics.toFloat (y - m.mouseStatus.y))
-            }
+        40 ->
+            { k | down = on }
 
+        87 ->
+            { k | w = on }
 
-mouseUp : { x : Int, y : Int } -> Model -> Model
-mouseUp { x, y } m =
-    { m | mouseStatus = { pressed = False, x = 0, y = 0 } }
+        83 ->
+            { k | s = on }
 
-
-mousePosition : ({ x : Int, y : Int } -> Msg) -> Decoder Msg
-mousePosition msg =
-    Decode.map2 (\x y -> msg { x = x, y = y })
-        (Decode.field "pageX" Decode.int)
-        (Decode.field "pageY" Decode.int)
+        _ ->
+            k
 
 
 
 -- MESHES
 
 
-numSegments : Float
-numSegments =
-    30
-
-
-sphere : Mesh { position : Vec3, coord : Vec3, norm : Vec3 }
-sphere =
-    let
-        latitudes =
-            List.map
-                (\idx -> ( Basics.toFloat idx / numSegments, (Basics.toFloat idx + 1) / numSegments ))
-                (List.range (-(round numSegments) // 2) ((round numSegments // 2) - 1))
-    in
+cube : Mesh { position : Vec3, coord : Vec3, norm : Vec3 }
+cube =
     WebGL.triangles <|
-        List.concatMap (\( lat1, lat2 ) -> ring lat1 lat2 numSegments 1) latitudes
+        List.concatMap rotatedFace [ ( 0, 0 ), ( 90, 0 ), ( 180, 0 ), ( 270, 0 ), ( 0, 90 ), ( 0, -90 ) ]
 
 
-ring : Float -> Float -> Float -> Float -> List ( { position : Vec3, coord : Vec3, norm : Vec3 }, { position : Vec3, coord : Vec3, norm : Vec3 }, { position : Vec3, coord : Vec3, norm : Vec3 } )
-ring latitude1 latitude2 segments radius =
+rotatedFace : ( Float, Float ) -> List ( { position : Vec3, coord : Vec3, norm : Vec3 }, { position : Vec3, coord : Vec3, norm : Vec3 }, { position : Vec3, coord : Vec3, norm : Vec3 } )
+rotatedFace ( angleX, angleY ) =
     let
-        longitudes =
-            List.map
-                (\idx -> ( Basics.toFloat idx / segments, (Basics.toFloat idx + 1) / segments ))
-                (List.range 0 (round segments - 1))
+        x =
+            makeRotate (degrees angleX) (vec3 1 0 0)
+
+        y =
+            makeRotate (degrees angleY) (vec3 0 1 0)
+
+        t =
+            makeTranslate (vec3 0 0 1)
+                |> mul y
+                |> mul x
+
+        normal =
+            Math.Vector3.negate (normalize (transform t (vec3 0 0 1)))
+
+        each f ( a, b, c ) =
+            ( f a, f b, f c )
     in
-    List.concatMap (\( longitude1, longitude2 ) -> face latitude1 latitude2 longitude1 longitude2 radius) longitudes
+    List.map (each (\x_ -> { x_ | position = transform t x_.position, norm = normal })) face
 
 
-face : Float -> Float -> Float -> Float -> Float -> List ( { position : Vec3, coord : Vec3, norm : Vec3 }, { position : Vec3, coord : Vec3, norm : Vec3 }, { position : Vec3, coord : Vec3, norm : Vec3 } )
-face latitude1 latitude2 longitude1 longitude2 radius =
+face : List ( { position : Vec3, coord : Vec3, norm : Vec3 }, { position : Vec3, coord : Vec3, norm : Vec3 }, { position : Vec3, coord : Vec3, norm : Vec3 } )
+face =
     let
-        theta1 =
-            degrees (180 * latitude1)
-
-        theta2 =
-            degrees (180 * latitude2)
-
-        phi1 =
-            degrees (360 * longitude1)
-
-        phi2 =
-            degrees (360 * longitude2)
-
         topLeft =
-            { position = vec3 (cos theta2 * sin phi1 * radius) (sin theta2 * radius) (cos theta2 * cos phi1 * radius), coord = vec3 (longitude1 - 0.5) (latitude2 - 0.5) 0, norm = vec3 (cos theta2 * sin phi1) (sin theta2) (cos theta2 * cos phi1) }
+            { position = vec3 -1 1 0, coord = vec3 0 1 0, norm = vec3 0 0 1 }
 
         topRight =
-            { position = vec3 (cos theta2 * sin phi2 * radius) (sin theta2 * radius) (cos theta2 * cos phi2 * radius), coord = vec3 (longitude2 - 0.5) (latitude2 - 0.5) 0, norm = vec3 (cos theta2 * sin phi2) (sin theta2) (cos theta2 * cos phi2) }
+            { position = vec3 1 1 0, coord = vec3 1 1 0, norm = vec3 0 0 1 }
 
         bottomLeft =
-            { position = vec3 (cos theta1 * sin phi1 * radius) (sin theta1 * radius) (cos theta1 * cos phi1 * radius), coord = vec3 (longitude1 - 0.5) (latitude1 - 0.5) 0, norm = vec3 (cos theta1 * sin phi1) (sin theta1) (cos theta1 * cos phi1) }
+            { position = vec3 -1 -1 0, coord = vec3 0 0 0, norm = vec3 0 0 1 }
 
         bottomRight =
-            { position = vec3 (cos theta1 * sin phi2 * radius) (sin theta1 * radius) (cos theta1 * cos phi2 * radius), coord = vec3 (longitude2 - 0.5) (latitude1 - 0.5) 0, norm = vec3 (cos theta1 * sin phi2) (sin theta1) (cos theta1 * cos phi2) }
+            { position = vec3 1 -1 0, coord = vec3 1 0 0, norm = vec3 0 0 1 }
     in
     [ ( topLeft, topRight, bottomLeft )
     , ( bottomLeft, topRight, bottomRight )
@@ -318,10 +395,10 @@ face latitude1 latitude2 longitude1 longitude2 radius =
 
 
 view : Model -> Html Msg
-view { texture, thetaX, thetaY, position, lighting, directionalColour, directional, ambientColour, directionalColourText, ambientColourText, directionalText } =
+view { texture, thetaX, thetaY, position, rx, ry, lighting, alpha, blending, directionalColour, directional, ambientColour, directionalColourText, ambientColourText, directionalText, alphaText } =
     let
         entities =
-            renderEntity sphere thetaX thetaY texture position lighting directionalColour directional ambientColour
+            renderEntity cube thetaX thetaY texture position lighting blending alpha directionalColour directional ambientColour
     in
     div
         []
@@ -334,8 +411,14 @@ view { texture, thetaX, thetaY, position, lighting, directionalColour, direction
             , style "top" "500px"
             ]
             [ div []
-                [ input [ type_ "checkbox", onClick UseLighting, checked lighting ] []
+                [ input [ type_ "checkbox", onClick UseBlending, checked blending ] []
+                , text " Use blending"
+                , input [ type_ "checkbox", onClick UseLighting, checked lighting ] []
                 , text " Use lighting"
+                ]
+            , div []
+                [ text "Alpha level:"
+                , input [ type_ "text", step "0.01", onInput ChangeAlpha, value alphaText ] []
                 ]
             , div []
                 [ h2 [] [ text "Directional Light" ]
@@ -375,21 +458,30 @@ view { texture, thetaX, thetaY, position, lighting, directionalColour, direction
 
 message : String
 message =
-    "Move the Moon dragging the mouse"
+    "Keys are: Right/Left/Up/Down rotate, w/s -> move camera in/out"
 
 
-renderEntity : Mesh { position : Vec3, coord : Vec3, norm : Vec3 } -> Float -> Float -> Maybe Texture -> Vec3 -> Bool -> Vec3 -> Vec3 -> Vec3 -> List Entity
-renderEntity mesh thetaX thetaY texture position lighting directionalColour directional ambientColour =
+renderEntity : Mesh { position : Vec3, coord : Vec3, norm : Vec3 } -> Float -> Float -> Maybe Texture -> Vec3 -> Bool -> Bool -> Float -> Vec3 -> Vec3 -> Vec3 -> List Entity
+renderEntity mesh thetaX thetaY texture position lighting blending alpha directionalColour directional ambientColour =
+    let
+        settings =
+            case blending of
+                True ->
+                    [ Blend.add Blend.srcAlpha Blend.one ]
+
+                False ->
+                    [ DepthTest.default ]
+    in
     case texture of
         Nothing ->
             []
 
         Just tex ->
-            [ WebGL.entity vertexShader fragmentShader mesh (uniformsShpere thetaX thetaY tex position lighting directionalColour directional ambientColour) ]
+            [ WebGL.entityWith settings vertexShader fragmentShader mesh (uniformsCube thetaX thetaY tex position lighting alpha directionalColour directional ambientColour) ]
 
 
-uniformsShpere : Float -> Float -> Texture -> Vec3 -> Bool -> Vec3 -> Vec3 -> Vec3 -> { texture : Texture, worldSpace : Mat4, perspective : Mat4, camera : Mat4, normalMatrix : Mat4, lighting : Bool, directionalColour : Vec3, ambientColour : Vec3, directional : Vec3 }
-uniformsShpere tx ty texture displacement lighting directionalColour directional ambientColour =
+uniformsCube : Float -> Float -> Texture -> Vec3 -> Bool -> Float -> Vec3 -> Vec3 -> Vec3 -> { texture : Texture, worldSpace : Mat4, perspective : Mat4, camera : Mat4, normalMatrix : Mat4, lighting : Bool, alpha : Float, directionalColour : Vec3, ambientColour : Vec3, directional : Vec3 }
+uniformsCube tx ty texture displacement lighting alpha directionalColour directional ambientColour =
     let
         worldSpace =
             rotate tx (vec3 0 1 0) (rotate ty (vec3 1 0 0) (makeTranslate displacement))
@@ -406,6 +498,7 @@ uniformsShpere tx ty texture displacement lighting directionalColour directional
     , camera = camera
     , normalMatrix = transpose (inverseOrthonormal (mul worldSpace camera))
     , lighting = lighting
+    , alpha = alpha
     , directionalColour = directionalColour
     , ambientColour = ambientColour
     , directional = directional
@@ -453,18 +546,19 @@ vertexShader =
 |]
 
 
-fragmentShader : Shader {} { unif | texture : Texture } { vcoord : Vec2, lightWeighting : Vec3 }
+fragmentShader : Shader {} { unif | texture : Texture, alpha : Float } { vcoord : Vec2, lightWeighting : Vec3 }
 fragmentShader =
     [glsl|
   precision mediump float;
 
   uniform sampler2D texture;
+  uniform float alpha;
   varying vec2 vcoord;
   varying vec3 lightWeighting;
 
   void main () {
       vec4 textureColor = texture2D(texture, vec2(vcoord.s, vcoord.t));
-      gl_FragColor = vec4(textureColor.rgb * lightWeighting, textureColor.a);
+      gl_FragColor = vec4(textureColor.rgb * lightWeighting, textureColor.a * alpha);
   }
 
 |]

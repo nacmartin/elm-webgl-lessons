@@ -1,4 +1,4 @@
-module Main exposing (main)
+module Lesson04 exposing (main)
 
 -- Create a pyramid and a cube meshes
 

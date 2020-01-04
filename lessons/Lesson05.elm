@@ -1,4 +1,4 @@
-module Main exposing (main)
+module Lesson05 exposing (main)
 
 -- Rotating cube mesh with texture
 

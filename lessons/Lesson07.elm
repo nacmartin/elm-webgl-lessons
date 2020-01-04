@@ -1,4 +1,4 @@
-module Main exposing (main)
+module Lesson07 exposing (main)
 
 import Browser
 import Browser.Events exposing (onAnimationFrameDelta, onKeyDown, onKeyUp)
@@ -12,8 +12,6 @@ import Math.Vector3 exposing (..)
 import String exposing (toFloat)
 import Task exposing (Task)
 import WebGL exposing (Entity, Mesh, Shader)
-import WebGL.Settings.Blend as Blend
-import WebGL.Settings.DepthTest as DepthTest
 import WebGL.Texture as Texture exposing (Error, Texture, defaultOptions)
 
 
@@ -26,9 +24,6 @@ type alias Model =
     , rx : Float
     , ry : Float
     , lighting : Bool
-    , blending : Bool
-    , alpha : Float
-    , alphaText : String
     , directionalColourText : { x : String, y : String, z : String }
     , directionalColour : Vec3
     , ambientColourText : { x : String, y : String, z : String }
@@ -50,8 +45,6 @@ type Msg
     | KeyChange Bool Int
     | Animate Float
     | UseLighting
-    | UseBlending
-    | ChangeAlpha String
     | ChangeDirectionalColourR String
     | ChangeDirectionalColourG String
     | ChangeDirectionalColourB String
@@ -83,9 +76,6 @@ init =
       , keys = Keys False False False False False False
       , position = vec3 0 0 -4
       , lighting = True
-      , blending = True
-      , alpha = 0.5
-      , alphaText = "0.5"
       , directionalColourText = { x = "0.8", y = "0.2", z = "0.2" }
       , directionalColour = vec3 0.8 0.2 0.2
       , ambientColourText = { x = "0.2", y = "0.2", z = "0.9" }
@@ -93,7 +83,7 @@ init =
       , directionalText = { x = "-0.25", y = "0.25", z = "-1" }
       , directional = vec3 -0.25 -0.25 -1
       }
-    , Texture.loadWith { defaultOptions | minify = Texture.nearest } "textures/glass.gif"
+    , Texture.loadWith { defaultOptions | minify = Texture.nearest } "textures/crate.gif"
         |> Task.attempt TextureLoaded
     )
 
@@ -126,21 +116,6 @@ update msg model =
 
         UseLighting ->
             ( { model | lighting = not model.lighting }, Cmd.none )
-
-        UseBlending ->
-            ( { model | blending = not model.blending }, Cmd.none )
-
-        ChangeAlpha value ->
-            let
-                parsed =
-                    case String.toFloat value of
-                        Just val ->
-                            val
-
-                        _ ->
-                            model.alpha
-            in
-            ( { model | alpha = parsed, alphaText = value }, Cmd.none )
 
         ChangeDirectionalX value ->
             let
@@ -212,7 +187,7 @@ updateAndParseX default textual value =
         text =
             { textual | x = value }
     in
-    ( parse default text, text )
+    updateAndParse default text
 
 
 updateAndParseY : Vec3 -> Triplet -> String -> ( Vec3, Triplet )
@@ -221,7 +196,7 @@ updateAndParseY default textual value =
         text =
             { textual | y = value }
     in
-    ( parse default text, text )
+    updateAndParse default text
 
 
 updateAndParseZ : Vec3 -> Triplet -> String -> ( Vec3, Triplet )
@@ -230,16 +205,17 @@ updateAndParseZ default textual value =
         text =
             { textual | z = value }
     in
-    ( parse default text, text )
+    updateAndParse default text
 
 
-parse : Vec3 -> Triplet -> Vec3
-parse default text =
-    Maybe.map3 vec3
-        (String.toFloat text.x)
-        (String.toFloat text.y)
-        (String.toFloat text.z)
-        |> Maybe.withDefault default
+updateAndParse : Vec3 -> Triplet -> ( Vec3, Triplet )
+updateAndParse default text =
+    case ( String.toFloat text.x, String.toFloat text.y, String.toFloat text.z ) of
+        ( Just vr, Just vg, Just vb ) ->
+            ( vec3 vr vg vb, text )
+
+        _ ->
+            ( default, text )
 
 
 rotateX : { keys | right : Bool, left : Bool } -> Float -> Float
@@ -395,10 +371,10 @@ face =
 
 
 view : Model -> Html Msg
-view { texture, thetaX, thetaY, position, rx, ry, lighting, alpha, blending, directionalColour, directional, ambientColour, directionalColourText, ambientColourText, directionalText, alphaText } =
+view { texture, thetaX, thetaY, position, rx, ry, lighting, directionalColour, directional, ambientColour, directionalColourText, ambientColourText, directionalText } =
     let
         entities =
-            renderEntity cube thetaX thetaY texture position lighting blending alpha directionalColour directional ambientColour
+            renderEntity cube thetaX thetaY texture position lighting directionalColour directional ambientColour
     in
     div
         []
@@ -411,14 +387,8 @@ view { texture, thetaX, thetaY, position, rx, ry, lighting, alpha, blending, dir
             , style "top" "500px"
             ]
             [ div []
-                [ input [ type_ "checkbox", onClick UseBlending, checked blending ] []
-                , text " Use blending"
-                , input [ type_ "checkbox", onClick UseLighting, checked lighting ] []
+                [ input [ type_ "checkbox", onClick UseLighting, checked lighting ] []
                 , text " Use lighting"
-                ]
-            , div []
-                [ text "Alpha level:"
-                , input [ type_ "text", step "0.01", onInput ChangeAlpha, value alphaText ] []
                 ]
             , div []
                 [ h2 [] [ text "Directional Light" ]
@@ -461,27 +431,18 @@ message =
     "Keys are: Right/Left/Up/Down rotate, w/s -> move camera in/out"
 
 
-renderEntity : Mesh { position : Vec3, coord : Vec3, norm : Vec3 } -> Float -> Float -> Maybe Texture -> Vec3 -> Bool -> Bool -> Float -> Vec3 -> Vec3 -> Vec3 -> List Entity
-renderEntity mesh thetaX thetaY texture position lighting blending alpha directionalColour directional ambientColour =
-    let
-        settings =
-            case blending of
-                True ->
-                    [ Blend.add Blend.srcAlpha Blend.one ]
-
-                False ->
-                    [ DepthTest.default ]
-    in
+renderEntity : Mesh { position : Vec3, coord : Vec3, norm : Vec3 } -> Float -> Float -> Maybe Texture -> Vec3 -> Bool -> Vec3 -> Vec3 -> Vec3 -> List Entity
+renderEntity mesh thetaX thetaY texture position lighting directionalColour directional ambientColour =
     case texture of
         Nothing ->
             []
 
         Just tex ->
-            [ WebGL.entityWith settings vertexShader fragmentShader mesh (uniformsCube thetaX thetaY tex position lighting alpha directionalColour directional ambientColour) ]
+            [ WebGL.entity vertexShader fragmentShader mesh (uniformsCube thetaX thetaY tex position lighting directionalColour directional ambientColour) ]
 
 
-uniformsCube : Float -> Float -> Texture -> Vec3 -> Bool -> Float -> Vec3 -> Vec3 -> Vec3 -> { texture : Texture, worldSpace : Mat4, perspective : Mat4, camera : Mat4, normalMatrix : Mat4, lighting : Bool, alpha : Float, directionalColour : Vec3, ambientColour : Vec3, directional : Vec3 }
-uniformsCube tx ty texture displacement lighting alpha directionalColour directional ambientColour =
+uniformsCube : Float -> Float -> Texture -> Vec3 -> Bool -> Vec3 -> Vec3 -> Vec3 -> { texture : Texture, worldSpace : Mat4, perspective : Mat4, camera : Mat4, normalMatrix : Mat4, lighting : Bool, directionalColour : Vec3, ambientColour : Vec3, directional : Vec3 }
+uniformsCube tx ty texture displacement lighting directionalColour directional ambientColour =
     let
         worldSpace =
             rotate tx (vec3 0 1 0) (rotate ty (vec3 1 0 0) (makeTranslate displacement))
@@ -496,9 +457,8 @@ uniformsCube tx ty texture displacement lighting alpha directionalColour directi
     , worldSpace = worldSpace
     , perspective = perspective
     , camera = camera
-    , normalMatrix = transpose (inverseOrthonormal (mul worldSpace camera))
+    , normalMatrix = transpose (inverseOrthonormal worldSpace)
     , lighting = lighting
-    , alpha = alpha
     , directionalColour = directionalColour
     , ambientColour = ambientColour
     , directional = directional
@@ -539,26 +499,25 @@ vertexShader =
       lightWeighting = vec3(1.0, 1.0, 1.0);
     } else {
       vec4 transformedNormal = normalMatrix * vec4(norm, 0.0);
-      float directionalLightWeighting = max(dot(transformedNormal, vec4(directional, 0)), 0.0);
+      float directionalLightWeighting = max(dot(transformedNormal, vec4(normalize(directional), 0)), 0.0);
       lightWeighting = ambientColour + directionalColour * directionalLightWeighting;
     }
   }
 |]
 
 
-fragmentShader : Shader {} { unif | texture : Texture, alpha : Float } { vcoord : Vec2, lightWeighting : Vec3 }
+fragmentShader : Shader {} { unif | texture : Texture } { vcoord : Vec2, lightWeighting : Vec3 }
 fragmentShader =
     [glsl|
   precision mediump float;
 
   uniform sampler2D texture;
-  uniform float alpha;
   varying vec2 vcoord;
   varying vec3 lightWeighting;
 
   void main () {
       vec4 textureColor = texture2D(texture, vec2(vcoord.s, vcoord.t));
-      gl_FragColor = vec4(textureColor.rgb * lightWeighting, textureColor.a * alpha);
+      gl_FragColor = vec4(textureColor.rgb * lightWeighting, textureColor.a);
   }
 
 |]

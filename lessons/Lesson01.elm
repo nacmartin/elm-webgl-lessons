@@ -1,4 +1,4 @@
-module Main exposing (main)
+module Lesson01 exposing (main)
 
 -- Create a mesh with a triangle and a square
 
