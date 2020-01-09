@@ -1,4 +1,4 @@
-module Main exposing (main)
+module Lesson12 exposing (main)
 
 import Browser
 import Browser.Events exposing (onAnimationFrameDelta)
@@ -18,9 +18,7 @@ type alias Model =
     { textures : Maybe ( Texture, Texture )
     , positionMoon : Vec3
     , positionCrate : Vec3
-    , useLighting : Bool
-    , useTextures : Bool
-    , usePerFragment : Bool
+    , lighting : Bool
     , theta : Float
     , pointColourText : { x : String, y : String, z : String }
     , pointColour : Vec3
@@ -41,8 +39,6 @@ type alias Triplet =
 type Msg
     = TexturesLoaded (Result Error ( Texture, Texture ))
     | UseLighting
-    | UseTextures
-    | UsePerFragment
     | ChangePointColourR String
     | ChangePointColourG String
     | ChangePointColourB String
@@ -61,9 +57,7 @@ init =
       , theta = 0
       , positionCrate = vec3 -2 0 0
       , positionMoon = vec3 2 0 0
-      , useLighting = True
-      , useTextures = True
-      , usePerFragment = True
+      , lighting = True
       , pointColourText = { x = "1", y = "1", z = "1" }
       , pointColour = vec3 1 1 1
       , ambientColourText = { x = "0.2", y = "0.2", z = "0.2" }
@@ -85,13 +79,7 @@ update msg model =
             ( { model | textures = Result.toMaybe textures }, Cmd.none )
 
         UseLighting ->
-            ( { model | useLighting = not model.useLighting }, Cmd.none )
-
-        UseTextures ->
-            ( { model | useTextures = not model.useTextures }, Cmd.none )
-
-        UsePerFragment ->
-            ( { model | usePerFragment = not model.usePerFragment }, Cmd.none )
+            ( { model | lighting = not model.lighting }, Cmd.none )
 
         ChangePointX value ->
             let
@@ -226,7 +214,9 @@ sphere : Mesh { position : Vec3, coord : Vec3, norm : Vec3 }
 sphere =
     let
         latitudes =
-            List.map (\idx -> ( Basics.toFloat idx / numSegments, (Basics.toFloat idx + 1) / numSegments )) (List.range (-(round numSegments) // 2) ((round numSegments // 2) - 1))
+            List.map
+                (\idx -> ( Basics.toFloat idx / numSegments, (Basics.toFloat idx + 1) / numSegments ))
+                (List.range (-(round numSegments) // 2) ((round numSegments // 2) - 1))
     in
     WebGL.triangles <|
         List.concatMap (\( lat1, lat2 ) -> ring lat1 lat2 numSegments 1) latitudes
@@ -236,7 +226,9 @@ ring : Float -> Float -> Float -> Float -> List ( { position : Vec3, coord : Vec
 ring latitude1 latitude2 segments radius =
     let
         longitudes =
-            List.map (\idx -> ( Basics.toFloat idx / segments, (Basics.toFloat idx + 1) / segments )) (List.range 0 (round segments - 1))
+            List.map
+                (\idx -> ( Basics.toFloat idx / segments, (Basics.toFloat idx + 1) / segments ))
+                (List.range 0 (round segments - 1))
     in
     List.concatMap (\( longitude1, longitude2 ) -> sphereFace latitude1 latitude2 longitude1 longitude2 radius) longitudes
 
@@ -327,14 +319,13 @@ face =
 
 
 view : Model -> Html Msg
-view { textures, theta, positionCrate, positionMoon, useLighting, useTextures, usePerFragment, pointColour, point, ambientColour, pointColourText, ambientColourText, pointText } =
+view { textures, theta, positionCrate, positionMoon, lighting, pointColour, point, ambientColour, pointColourText, ambientColourText, pointText } =
     let
         entities =
             case textures of
                 Just ( textureMoon, textureCrate ) ->
-                    [ renderEntity sphere theta textureMoon positionMoon useLighting useTextures usePerFragment pointColour point ambientColour
-                    , renderEntity cube theta textureCrate positionCrate useLighting useTextures usePerFragment pointColour point ambientColour
-                    ]
+                    renderEntity sphere theta textureMoon positionMoon lighting pointColour point ambientColour
+                        ++ renderEntity cube theta textureCrate positionCrate lighting pointColour point ambientColour
 
                 Nothing ->
                     []
@@ -350,16 +341,8 @@ view { textures, theta, positionCrate, positionMoon, useLighting, useTextures, u
             , style "top" "500px"
             ]
             [ div []
-                [ input [ type_ "checkbox", onClick UseLighting, checked useLighting ] []
+                [ input [ type_ "checkbox", onClick UseLighting, checked lighting ] []
                 , text " Use lighting"
-                ]
-            , div []
-                [ input [ type_ "checkbox", onClick UseTextures, checked useTextures ] []
-                , text " Use textures"
-                ]
-            , div []
-                [ input [ type_ "checkbox", onClick UsePerFragment, checked usePerFragment ] []
-                , text " Use per-fragment lighting"
                 ]
             , div []
                 [ h2 [] [ text "Point Light" ]
@@ -396,18 +379,13 @@ view { textures, theta, positionCrate, positionMoon, useLighting, useTextures, u
         ]
 
 
-renderEntity : Mesh { position : Vec3, coord : Vec3, norm : Vec3 } -> Float -> Texture -> Vec3 -> Bool -> Bool -> Bool -> Vec3 -> Vec3 -> Vec3 -> Entity
-renderEntity mesh theta texture position useLighting useTextures usePerFragment pointColour point ambientColour =
-    case usePerFragment of
-        True ->
-            WebGL.entity vertexShaderPF fragmentShaderPF mesh (uniformsShpere theta texture position useLighting useTextures pointColour point ambientColour)
-
-        False ->
-            WebGL.entity vertexShaderPV fragmentShaderPV mesh (uniformsShpere theta texture position useLighting useTextures pointColour point ambientColour)
+renderEntity : Mesh { position : Vec3, coord : Vec3, norm : Vec3 } -> Float -> Texture -> Vec3 -> Bool -> Vec3 -> Vec3 -> Vec3 -> List Entity
+renderEntity mesh theta texture position lighting pointColour point ambientColour =
+    [ WebGL.entity vertexShader fragmentShader mesh (uniformsShpere theta texture position lighting pointColour point ambientColour) ]
 
 
-uniformsShpere : Float -> Texture -> Vec3 -> Bool -> Bool -> Vec3 -> Vec3 -> Vec3 -> { texture : Texture, worldSpace : Mat4, perspective : Mat4, camera : Mat4, normalMatrix : Mat4, useLighting : Bool, useTextures : Bool, pointColour : Vec3, ambientColour : Vec3, point : Vec3 }
-uniformsShpere tx texture displacement useLighting useTextures pointColour point ambientColour =
+uniformsShpere : Float -> Texture -> Vec3 -> Bool -> Vec3 -> Vec3 -> Vec3 -> { texture : Texture, worldSpace : Mat4, perspective : Mat4, camera : Mat4, normalMatrix : Mat4, lighting : Int, pointColour : Vec3, ambientColour : Vec3, point : Vec3 }
+uniformsShpere tx texture displacement lighting pointColour point ambientColour =
     let
         worldSpace =
             translate displacement (makeRotate tx (vec3 0 1 0))
@@ -417,14 +395,20 @@ uniformsShpere tx texture displacement useLighting useTextures pointColour point
 
         perspective =
             makePerspective 45 1 0.1 100
+
+        boolToInt bool =
+            if bool then
+                1
+
+            else
+                0
     in
     { texture = texture
     , worldSpace = worldSpace
     , perspective = perspective
     , camera = camera
     , normalMatrix = transpose (inverseOrthonormal worldSpace)
-    , useLighting = useLighting
-    , useTextures = useTextures
+    , lighting = boolToInt lighting
     , pointColour = pointColour
     , ambientColour = ambientColour
     , point = point
@@ -435,8 +419,8 @@ uniformsShpere tx texture displacement useLighting useTextures pointColour point
 -- SHADERS
 
 
-vertexShaderPF : Shader { attr | position : Vec3, coord : Vec3, norm : Vec3 } { unif | worldSpace : Mat4, perspective : Mat4, camera : Mat4, normalMatrix : Mat4 } { vcoord : Vec2, vPosition : Vec3, vTransformedNormal : Vec3 }
-vertexShaderPF =
+vertexShader : Shader { attr | position : Vec3, coord : Vec3, norm : Vec3 } { unif | worldSpace : Mat4, perspective : Mat4, camera : Mat4, normalMatrix : Mat4, lighting : Int, pointColour : Vec3, ambientColour : Vec3, point : Vec3 } { vcoord : Vec2, lightWeighting : Vec3 }
+vertexShader =
     [glsl|
 
   precision mediump float;
@@ -449,76 +433,7 @@ vertexShaderPF =
   uniform mat4 perspective;
   uniform mat4 normalMatrix;
   uniform mat4 camera;
-
-  varying vec2 vcoord;
-  varying vec3 vPosition;
-  varying vec3 vTransformedNormal;
-
-  void main() {
-    vcoord = coord.xy;
-    vTransformedNormal = vec3(normalMatrix * vec4(norm, 0.0));
-    vec4 v4Position =  worldSpace * vec4(position, 1.0);
-    gl_Position = perspective * camera * v4Position;
-    vPosition =  vec3(v4Position);
-  }
-|]
-
-
-fragmentShaderPF : Shader {} { unif | texture : Texture, useLighting : Bool, useTextures : Bool, ambientColour : Vec3, pointColour : Vec3, point : Vec3 } { vcoord : Vec2, vPosition : Vec3, vTransformedNormal : Vec3 }
-fragmentShaderPF =
-    [glsl|
-  precision mediump float;
-
-  uniform sampler2D texture;
-  uniform bool useLighting;
-  uniform bool useTextures;
-  uniform vec3 ambientColour;
-  uniform vec3 pointColour;
-  uniform vec3 point;
-
-  varying vec2 vcoord;
-  varying vec3 vPosition;
-  varying vec3 vTransformedNormal;
-
-  void main () {
-      vec3 lightWeighting;
-      lightWeighting = vec3(1.0, 1.0, 1.0);
-      if (!useLighting) {
-        lightWeighting = vec3(1.0, 1.0, 1.0);
-      } else {
-        vec3 lightDirection = normalize(point - vPosition );
-
-        float directionalLightWeighting = max(dot(normalize(vTransformedNormal), lightDirection), 0.0);
-        lightWeighting = ambientColour + pointColour * directionalLightWeighting;
-      }
-      vec4 fragmentColor;
-      if (useTextures) {
-        fragmentColor = texture2D(texture, vec2(vcoord.s, vcoord.t));
-      } else {
-        fragmentColor = vec4(1.0, 1.0, 1.0, 1.0);
-      }
-      gl_FragColor = vec4(fragmentColor.rgb * lightWeighting, fragmentColor.a);
-  }
-
-
-|]
-
-
-vertexShaderPV : Shader { attr | position : Vec3, coord : Vec3, norm : Vec3 } { unif | worldSpace : Mat4, perspective : Mat4, camera : Mat4, normalMatrix : Mat4, useLighting : Bool, pointColour : Vec3, ambientColour : Vec3, point : Vec3 } { vcoord : Vec2, lightWeighting : Vec3 }
-vertexShaderPV =
-    [glsl|
-
-  precision mediump float;
-
-  attribute vec3 position;
-  attribute vec3 coord;
-  attribute vec3 norm;
-
-  uniform mat4 worldSpace;
-  uniform mat4 perspective;
-  uniform mat4 normalMatrix;
-  uniform mat4 camera;
-  uniform bool useLighting;
+  uniform int lighting;
   uniform vec3 pointColour;
   uniform vec3 point;
   uniform vec3 ambientColour;
@@ -531,9 +446,11 @@ vertexShaderPV =
     gl_Position = perspective * camera * mvPosition;
     vcoord = coord.xy;
 
-    if (!useLighting) {
+    if (lighting == 0) {
       lightWeighting = vec3(1.0, 1.0, 1.0);
     } else {
+      //vec4 directional = vec4(normalize(point), 0.0);
+
       vec3 transformedNormal = vec3(normalMatrix * vec4(norm, 0.0));
       vec3 lightDirection = normalize(point - vec3(mvPosition) );
       float pointLightWeighting = max(dot(transformedNormal, lightDirection), 0.0);
@@ -543,25 +460,18 @@ vertexShaderPV =
 |]
 
 
-fragmentShaderPV : Shader {} { unif | texture : Texture, useTextures : Bool } { vcoord : Vec2, lightWeighting : Vec3 }
-fragmentShaderPV =
+fragmentShader : Shader {} { unif | texture : Texture } { vcoord : Vec2, lightWeighting : Vec3 }
+fragmentShader =
     [glsl|
   precision mediump float;
 
   uniform sampler2D texture;
-  uniform bool useTextures;
-
   varying vec2 vcoord;
   varying vec3 lightWeighting;
 
   void main () {
-      vec4 fragmentColor;
-      if (useTextures) {
-        fragmentColor = texture2D(texture, vec2(vcoord.s, vcoord.t));
-      } else {
-        fragmentColor = vec4(1.0, 1.0, 1.0, 1.0);
-      }
-      gl_FragColor = vec4(fragmentColor.rgb * lightWeighting, fragmentColor.a);
+      vec4 textureColor = texture2D(texture, vec2(vcoord.s, vcoord.t));
+      gl_FragColor = vec4(textureColor.rgb * lightWeighting, textureColor.a);
   }
 
 |]

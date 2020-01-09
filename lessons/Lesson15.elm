@@ -1,24 +1,23 @@
-module Main exposing (main)
+module Lesson15 exposing (main)
 
+import Array
 import Browser
 import Browser.Events exposing (onAnimationFrameDelta, onKeyDown, onKeyUp)
 import Html exposing (Html, div, h2, input, text)
 import Html.Attributes exposing (checked, height, step, style, type_, value, width)
 import Html.Events exposing (onClick, onInput)
 import Http
-import Json.Decode as Decode exposing (..)
+import Json.Decode exposing (..)
 import List.Extra exposing (getAt, greedyGroupsOf)
 import Math.Matrix4 exposing (..)
 import Math.Vector2 exposing (Vec2)
 import Math.Vector3 exposing (..)
+import Random
+import Regex
 import String
 import Task exposing (Task, succeed)
 import WebGL exposing (Entity, Mesh, Shader)
 import WebGL.Texture as Texture exposing (Error, Texture, defaultOptions)
-
-
-type alias Vertex =
-    { position : Vec3, coord : Vec3, normal : Vec3 }
 
 
 type alias Triplet =
@@ -29,14 +28,11 @@ type alias Triplet =
 
 
 type alias Model =
-    { texture : Maybe Texture
+    { textures : Maybe ( Texture, Texture )
     , position : Vec3
-    , world : Mesh Vertex
     , useLighting : Bool
-    , useSpecular : Bool
-    , useTextures : Bool
-    , shininess : Float
-    , shininessText : String
+    , useSpecularMap : Bool
+    , useColorMap : Bool
     , ambientColorText : { x : String, y : String, z : String }
     , ambientColor : Vec3
     , diffuseColorText : { x : String, y : String, z : String }
@@ -50,13 +46,11 @@ type alias Model =
 
 
 type Msg
-    = TextureLoaded (Result Error Texture)
+    = TexturesLoaded (Result Error ( Texture, Texture ))
     | Animate Float
-    | WorldLoaded (Result Http.Error (Mesh Vertex))
     | UseLighting
-    | UseSpecular
-    | UseTextures
-    | ChangeShininess String
+    | UseSpecularMap
+    | UseColorMap
     | ChangeSpecularColorR String
     | ChangeSpecularColorG String
     | ChangeSpecularColorB String
@@ -73,14 +67,13 @@ type Msg
 
 init : ( Model, Cmd Msg )
 init =
-    ( { texture = Nothing
+    ( { textures = Nothing
       , position = vec3 0 0 0
-      , world = WebGL.triangles []
       , useLighting = True
-      , useTextures = True
-      , useSpecular = True
-      , specularColor = vec3 1 1 1
-      , specularColorText = { x = "1", y = "1", z = "1" }
+      , useColorMap = True
+      , useSpecularMap = True
+      , specularColor = vec3 5 5 5
+      , specularColorText = { x = "5", y = "5", z = "5" }
       , ambientColor = vec3 0.2 0.2 0.2
       , ambientColorText = { x = "0.2", y = "0.2", z = "0.2" }
       , diffuseColor = vec3 0.8 0.8 0.8
@@ -88,82 +81,19 @@ init =
       , specular = vec3 -10 4 20
       , specularText = { x = "-10", y = "4", z = "20" }
       , theta = 0
-      , shininessText = "32.0"
-      , shininess = 32.0
       }
-    , Cmd.batch
-        [ Texture.loadWith { defaultOptions | minify = Texture.linear, magnify = Texture.linear } "textures/metal.jpg"
-            |> Task.attempt TextureLoaded
-        , Http.get
-            { url = "meshes/Teapot.json"
-            , expect =
-                Http.expectJson
-                    (Result.map getWorld >> WorldLoaded)
-                    worldDecoder
-            }
-        ]
+    , Task.map2 Tuple.pair
+        (Texture.loadWith { defaultOptions | minify = Texture.linear, magnify = Texture.linear } "textures/earth.jpg")
+        (Texture.loadWith { defaultOptions | minify = Texture.linear, magnify = Texture.linear } "textures/earth-specular.gif")
+        |> Task.attempt TexturesLoaded
     )
-
-
-type alias World =
-    { vertexPositions : List Float, vertexNormals : List Float, vertexTextureCoords : List Float, indices : List Int }
-
-
-makeVec3 : List Float -> Vec3
-makeVec3 coords =
-    case coords of
-        a :: b :: [] ->
-            vec3 a b 0
-
-        a :: b :: c :: [] ->
-            vec3 a b c
-
-        _ ->
-            vec3 0 0 0
-
-
-getWorld { vertexPositions, vertexNormals, vertexTextureCoords, indices } =
-    let
-        vertexes =
-            List.map3
-                (\a b c ->
-                    { position = makeVec3 a
-                    , coord = makeVec3 b
-                    , normal = makeVec3 c
-                    }
-                )
-                (greedyGroupsOf 3 vertexPositions)
-                (greedyGroupsOf 2 vertexTextureCoords)
-                (greedyGroupsOf 3 vertexNormals)
-
-        groupIndicesBy3 currentIndices result =
-            case currentIndices of
-                i1 :: i2 :: i3 :: restIndices ->
-                    groupIndicesBy3 restIndices (( i1, i2, i3 ) :: result)
-
-                _ ->
-                    List.reverse result
-    in
-    WebGL.indexedTriangles vertexes (groupIndicesBy3 indices [])
-
-
-worldDecoder : Decoder World
-worldDecoder =
-    Decode.map4 World
-        (Decode.field "vertexPositions" (Decode.list Decode.float))
-        (Decode.field "vertexNormals" (Decode.list Decode.float))
-        (Decode.field "vertexTextureCoords" (Decode.list Decode.float))
-        (Decode.field "indices" (Decode.list Decode.int))
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        WorldLoaded world ->
-            ( { model | world = Result.withDefault model.world world }, Cmd.none )
-
-        TextureLoaded texture ->
-            ( { model | texture = Result.toMaybe texture }, Cmd.none )
+        TexturesLoaded textures ->
+            ( { model | textures = Result.toMaybe textures }, Cmd.none )
 
         Animate dt ->
             ( { model | theta = model.theta + dt / 1000 }
@@ -173,11 +103,11 @@ update msg model =
         UseLighting ->
             ( { model | useLighting = not model.useLighting }, Cmd.none )
 
-        UseTextures ->
-            ( { model | useTextures = not model.useTextures }, Cmd.none )
+        UseColorMap ->
+            ( { model | useColorMap = not model.useColorMap }, Cmd.none )
 
-        UseSpecular ->
-            ( { model | useSpecular = not model.useSpecular }, Cmd.none )
+        UseSpecularMap ->
+            ( { model | useSpecularMap = not model.useSpecularMap }, Cmd.none )
 
         ChangeSpecularX value ->
             let
@@ -263,18 +193,6 @@ update msg model =
             in
             ( { model | diffuseColor = numeric, diffuseColorText = textual }, Cmd.none )
 
-        ChangeShininess value ->
-            let
-                parsed =
-                    case String.toFloat value of
-                        Just val ->
-                            val
-
-                        _ ->
-                            model.shininess
-            in
-            ( { model | shininess = parsed, shininessText = value }, Cmd.none )
-
 
 updateAndParseX : Vec3 -> Triplet -> String -> ( Vec3, Triplet )
 updateAndParseX default textual value =
@@ -317,9 +235,74 @@ main =
     Browser.element
         { init = \_ -> init
         , view = view
-        , subscriptions = \_ -> onAnimationFrameDelta Animate
+        , subscriptions = subscriptions
         , update = update
         }
+
+
+subscriptions : Model -> Sub Msg
+subscriptions _ =
+    onAnimationFrameDelta Animate
+
+
+
+-- MESHES
+
+
+numSegments : Float
+numSegments =
+    40
+
+
+sphere : Mesh { position : Vec3, coord : Vec3, normal : Vec3 }
+sphere =
+    let
+        latitudes =
+            List.map (\idx -> ( Basics.toFloat idx / numSegments, (Basics.toFloat idx + 1) / numSegments )) (List.range (-(round numSegments) // 2) ((round numSegments // 2) - 1))
+    in
+    WebGL.triangles <|
+        List.concatMap (\( lat1, lat2 ) -> ring lat1 lat2 numSegments 1) latitudes
+
+
+ring : Float -> Float -> Float -> Float -> List ( { position : Vec3, coord : Vec3, normal : Vec3 }, { position : Vec3, coord : Vec3, normal : Vec3 }, { position : Vec3, coord : Vec3, normal : Vec3 } )
+ring latitude1 latitude2 segments radius =
+    let
+        longitudes =
+            List.map (\idx -> ( Basics.toFloat idx / segments, (Basics.toFloat idx + 1) / segments )) (List.range 0 (round segments - 1))
+    in
+    List.concatMap (\( longitude1, longitude2 ) -> sphereFace latitude1 latitude2 longitude1 longitude2 radius) longitudes
+
+
+sphereFace : Float -> Float -> Float -> Float -> Float -> List ( { position : Vec3, coord : Vec3, normal : Vec3 }, { position : Vec3, coord : Vec3, normal : Vec3 }, { position : Vec3, coord : Vec3, normal : Vec3 } )
+sphereFace latitude1 latitude2 longitude1 longitude2 radius =
+    let
+        theta1 =
+            degrees (180 * latitude1)
+
+        theta2 =
+            degrees (180 * latitude2)
+
+        phi1 =
+            degrees (360 * longitude1)
+
+        phi2 =
+            degrees (360 * longitude2)
+
+        topLeft =
+            { position = vec3 (cos theta2 * sin phi1 * radius) (sin theta2 * radius) (cos theta2 * cos phi1 * radius), coord = vec3 (longitude1 - 0.5) (latitude2 - 0.5) 0, normal = vec3 (cos theta2 * sin phi1) (sin theta2) (cos theta2 * cos phi1) }
+
+        topRight =
+            { position = vec3 (cos theta2 * sin phi2 * radius) (sin theta2 * radius) (cos theta2 * cos phi2 * radius), coord = vec3 (longitude2 - 0.5) (latitude2 - 0.5) 0, normal = vec3 (cos theta2 * sin phi2) (sin theta2) (cos theta2 * cos phi2) }
+
+        bottomLeft =
+            { position = vec3 (cos theta1 * sin phi1 * radius) (sin theta1 * radius) (cos theta1 * cos phi1 * radius), coord = vec3 (longitude1 - 0.5) (latitude1 - 0.5) 0, normal = vec3 (cos theta1 * sin phi1) (sin theta1) (cos theta1 * cos phi1) }
+
+        bottomRight =
+            { position = vec3 (cos theta1 * sin phi2 * radius) (sin theta1 * radius) (cos theta1 * cos phi2 * radius), coord = vec3 (longitude2 - 0.5) (latitude1 - 0.5) 0, normal = vec3 (cos theta1 * sin phi2) (sin theta1) (cos theta1 * cos phi2) }
+    in
+    [ ( topLeft, topRight, bottomLeft )
+    , ( bottomLeft, topRight, bottomRight )
+    ]
 
 
 
@@ -327,12 +310,12 @@ main =
 
 
 view : Model -> Html Msg
-view { texture, theta, shininess, world, position, useLighting, useTextures, useSpecular, specular, specularText, specularColor, specularColorText, ambientColor, shininessText, ambientColorText, diffuseColorText, diffuseColor } =
+view { textures, theta, position, useLighting, useColorMap, useSpecularMap, specular, specularText, specularColor, specularColorText, ambientColor, ambientColorText, diffuseColorText, diffuseColor } =
     div
         []
         [ WebGL.toHtml
             [ width 600, height 600, style "background" "black" ]
-            (renderEntity world theta shininess texture position useLighting useSpecular useTextures specularColor specular ambientColor diffuseColor)
+            (renderEntity theta textures position useLighting useSpecularMap useColorMap specularColor specular ambientColor diffuseColor)
         , div
             [ style "left" "20px"
             , style "right" "20px"
@@ -343,19 +326,12 @@ view { texture, theta, shininess, world, position, useLighting, useTextures, use
                 , text " Use lighting"
                 ]
             , div []
-                [ input [ type_ "checkbox", onClick UseSpecular, checked useSpecular ] []
-                , text " Use specular lighting"
+                [ input [ type_ "checkbox", onClick UseSpecularMap, checked useSpecularMap ] []
+                , text " Use specular map"
                 ]
             , div []
-                [ input [ type_ "checkbox", onClick UseTextures, checked useTextures ] []
+                [ input [ type_ "checkbox", onClick UseColorMap, checked useColorMap ] []
                 , text " Use textures"
-                ]
-            , div []
-                [ h2 [] [ text "Material" ]
-                , div []
-                    [ text "Shininess: "
-                    , input [ type_ "text", onInput ChangeShininess, Html.Attributes.value shininessText ] []
-                    ]
                 ]
             , div []
                 [ h2 [] [ text "Point Light" ]
@@ -401,41 +377,48 @@ view { texture, theta, shininess, world, position, useLighting, useTextures, use
         ]
 
 
-renderEntity : Mesh { position : Vec3, coord : Vec3, normal : Vec3 } -> Float -> Float -> Maybe Texture -> Vec3 -> Bool -> Bool -> Bool -> Vec3 -> Vec3 -> Vec3 -> Vec3 -> List Entity
-renderEntity world theta shininess texture position useLighting useSpecular useTextures specularColor specular ambientColor diffuseColor =
-    case texture of
+renderEntity : Float -> Maybe ( Texture, Texture ) -> Vec3 -> Bool -> Bool -> Bool -> Vec3 -> Vec3 -> Vec3 -> Vec3 -> List Entity
+renderEntity theta textures position useLighting useSpecularMap useColorMap specularColor specular ambientColor diffuseColor =
+    case textures of
+        Just ( colorMap, specularMap ) ->
+            [ WebGL.entity vertexShader fragmentShader sphere (uniforms colorMap specularMap theta position useLighting useSpecularMap useColorMap specularColor specular ambientColor diffuseColor) ]
+
         Nothing ->
             []
 
-        Just tex ->
-            [ WebGL.entity vertexShader fragmentShader world (uniforms tex theta shininess position useLighting useSpecular useTextures specularColor specular ambientColor diffuseColor) ]
 
-
-uniforms : Texture -> Float -> Float -> Vec3 -> Bool -> Bool -> Bool -> Vec3 -> Vec3 -> Vec3 -> Vec3 -> { texture : Texture, perspective : Mat4, camera : Mat4, worldSpace : Mat4, useLighting : Bool, normalMatrix : Mat4, useSpecular : Bool, useTextures : Bool, specularColor : Vec3, ambientColor : Vec3, diffuseColor : Vec3, specular : Vec3, shininess : Float }
-uniforms texture theta shininess position useLighting useSpecular useTextures specularColor specular ambientColor diffuseColor =
+uniforms : Texture -> Texture -> Float -> Vec3 -> Bool -> Bool -> Bool -> Vec3 -> Vec3 -> Vec3 -> Vec3 -> { colorMap : Texture, specularMap : Texture, perspective : Mat4, camera : Mat4, worldSpace : Mat4, useLighting : Int, normalMatrix : Mat4, useSpecularMap : Int, useColorMap : Int, specularColor : Vec3, ambientColor : Vec3, diffuseColor : Vec3, specular : Vec3 }
+uniforms colorMap specularMap theta position useLighting useSpecularMap useColorMap specularColor specular ambientColor diffuseColor =
     let
         worldSpace =
-            translate position (rotate (degrees 23.4) (vec3 1 0 1) (makeRotate theta (vec3 0 1 0)))
+            translate position (makeRotate theta (vec3 0 1 0))
 
         camera =
-            makeLookAt (vec3 0 0 50) (vec3 0 0 -1) (vec3 0 1 0)
+            makeLookAt (vec3 0 0 3) (vec3 0 0 -1) (vec3 0 1 0)
 
         perspective =
             makePerspective 45 1 0.1 100
+
+        boolToInt bool =
+            if bool then
+                1
+
+            else
+                0
     in
-    { texture = texture
+    { colorMap = colorMap
+    , specularMap = specularMap
     , worldSpace = worldSpace
     , camera = camera
     , perspective = perspective
     , normalMatrix = transpose (inverseOrthonormal worldSpace)
-    , useLighting = useLighting
-    , useSpecular = useSpecular
-    , useTextures = useTextures
+    , useLighting = boolToInt useLighting
+    , useSpecularMap = boolToInt useSpecularMap
+    , useColorMap = boolToInt useColorMap
     , specularColor = specularColor
     , ambientColor = ambientColor
     , diffuseColor = diffuseColor
     , specular = specular
-    , shininess = shininess
     }
 
 
@@ -472,20 +455,20 @@ vertexShader =
 |]
 
 
-fragmentShader : Shader {} { unif | texture : Texture, useSpecular : Bool, useLighting : Bool, useTextures : Bool, ambientColor : Vec3, specularColor : Vec3, diffuseColor : Vec3, specular : Vec3, shininess : Float } { vcoord : Vec2, vPosition : Vec3, vTransformedNormal : Vec3 }
+fragmentShader : Shader {} { unif | colorMap : Texture, specularMap : Texture, useSpecularMap : Int, useLighting : Int, useColorMap : Int, ambientColor : Vec3, specularColor : Vec3, diffuseColor : Vec3, specular : Vec3 } { vcoord : Vec2, vPosition : Vec3, vTransformedNormal : Vec3 }
 fragmentShader =
     [glsl|
   precision mediump float;
 
-  uniform sampler2D texture;
-  uniform bool useLighting;
-  uniform bool useSpecular;
-  uniform bool useTextures;
+  uniform sampler2D colorMap;
+  uniform sampler2D specularMap;
+  uniform int useLighting;
+  uniform int useSpecularMap;
+  uniform int useColorMap;
   uniform vec3 ambientColor;
   uniform vec3 diffuseColor;
   uniform vec3 specularColor;
   uniform vec3 specular;
-  uniform float shininess;
 
   varying vec2 vcoord;
   varying vec3 vPosition;
@@ -494,7 +477,7 @@ fragmentShader =
   void main () {
       vec3 lightWeighting;
       lightWeighting = vec3(1.0, 1.0, 1.0);
-      if (!useLighting) {
+      if (useLighting == 0) {
         lightWeighting = vec3(1.0, 1.0, 1.0);
       } else {
 
@@ -502,7 +485,11 @@ fragmentShader =
         vec3 normal = normalize(vTransformedNormal);
 
         float specularLightWeighting = 0.0;
-        if (useSpecular) {
+        float shininess = 32.0;
+        if (useSpecularMap == 1) {
+            shininess = texture2D(specularMap, vec2(vcoord.s, vcoord.t)).r * 255.0;
+        }
+        if (shininess < 255.0) {
             vec3 eyeDirection = normalize(-vPosition.xyz);
             vec3 reflectionDirection = reflect(-lightDirection, normal);
 
@@ -515,8 +502,8 @@ fragmentShader =
             + diffuseColor * diffuseLightWeighting;
       }
       vec4 fragmentColor;
-      if (useTextures) {
-        fragmentColor = texture2D(texture, vec2(vcoord.s, vcoord.t));
+      if (useColorMap == 1) {
+        fragmentColor = texture2D(colorMap, vec2(vcoord.s, vcoord.t));
       } else {
         fragmentColor = vec4(1.0, 1.0, 1.0, 1.0);
       }
